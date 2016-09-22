@@ -10,7 +10,7 @@ GIT
 
 GIT
   remote: https://github.com/cloudfoundry/machete.git
-  revision: ea91aa99ceaf5090bb36e61114d9faa2e4080148
+  revision: b77df8fa995173b9a31cff7a4ab4fbf0b68bfae2
   branch: extra-cf-ssh
   specs:
     machete (0.0.49)
