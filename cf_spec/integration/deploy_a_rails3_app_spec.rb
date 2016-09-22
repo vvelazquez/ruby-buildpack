@@ -2,7 +2,6 @@ require 'cf_spec_helper'
 
 describe 'Rails 3 App' do
   before(:all) do
-    puts 'Starting app rails3_mri_200'
     @app = Machete.deploy_app('rails3_mri_200', env: {
       DATABASE_URL: 'sqlite3://db/test.db'
     })
@@ -11,7 +10,6 @@ describe 'Rails 3 App' do
   end
 
   after(:all) do
-    puts 'Deleting app rails3_mri_200'
     Machete::CF::DeleteApp.new.execute(@app)
   end
 
@@ -22,9 +20,7 @@ describe 'Rails 3 App' do
 
   context 'the app did not include the static asset or logging gems from Heroku' do
     specify 'the rails 3 plugins are installed automatically' do
-      puts `cf has-diego-enabled rails3_mri_200`
-      puts `CF_TRACE=true cf ssh rails3_mri_200 -c 'ls /app/vendor/plugins/rails3_serve_static_assets/init.rb -v'`
-      puts `CF_TRACE=true cf ssh rails3_mri_200 -c 'ls /app/vendor/plugins/rails_log_stdout/init.rb -v'`
+      `cf ssh rails3_mri_200`
       expect(@app).to have_file '/app/vendor/plugins/rails3_serve_static_assets/init.rb'
       expect(@app).to have_file '/app/vendor/plugins/rails_log_stdout/init.rb'
     end
