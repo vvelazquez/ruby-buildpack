@@ -10,8 +10,8 @@ GIT
 
 GIT
   remote: https://github.com/cloudfoundry/machete.git
-  revision: b77df8fa995173b9a31cff7a4ab4fbf0b68bfae2
-  branch: extra-cf-ssh
+  revision: 2a17405954e8f060fbf0b7b71759d9383e125550
+  branch: master
   specs:
     machete (0.0.49)
       childprocess
@@ -37,7 +37,7 @@ GEM
     json (1.8.3)
     kwalify (0.7.2)
     method_source (0.8.2)
-    minitest (5.9.0)
+    minitest (5.9.1)
     multi_xml (0.5.5)
     pry (0.10.4)
       coderay (~> 1.1.0)
