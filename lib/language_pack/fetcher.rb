@@ -17,8 +17,8 @@ module LanguagePack
     def fetch(path)
       download_url = @host_url.join(path)
       output_directory = Dir.pwd
-      buildpack_dir = File.join(File.dirname(__FILE__), "..", "..")
-      bin_path = File.expand_path(buildpack_dir, "compile-extensions", "bin"))
+      buildpack_dir = File.expand_path(File.join(File.dirname(__FILE__), "..", ".."))
+      bin_path = File.join(buildpack_dir, "compile-extensions", "bin")
       download_command = "#{bin_path}/download_dependency #{download_url} #{output_directory}"
 
       filtered_url = `#{download_command}`.strip
