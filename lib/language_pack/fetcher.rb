@@ -29,7 +29,7 @@ module LanguagePack
         raise FetchError, message
       end
 
-      system "#{bin_path}/warn_if_newer_version #{download_url} #{File.join(buildpack_dir, 'manifest.yml')}"
+      system "#{bin_path}/warn_if_newer_patch #{download_url} #{File.join(buildpack_dir, 'manifest.yml')}"
 
       puts "Downloaded [#{filtered_url}]"
       filtered_url
