@@ -5,12 +5,13 @@ module LanguagePack
     # Takes an array of plugin names and vendor_url
     # fetches plugins from url, installs them
     class PluginsInstaller
-      attr_accessor :plugins, :vendor_url
+      attr_accessor :plugins, :vendor_url, :buildpack_dir
       include LanguagePack::ShellHelpers
 
       def initialize(plugins, vendor_url = LanguagePack::Base::VENDOR_URL)
         @plugins    = plugins || []
         @vendor_url = vendor_url
+        @buildpack_dir = File.expand_path(File.join(File.dirname(__FILE__), '..', '..', '..'))
       end
 
       # vendors all the plugins into the slug
@@ -28,11 +29,10 @@ module LanguagePack
       def vendor(name)
         directory = plugin_dir(name)
         return true if directory.exist?
+
         directory.mkpath
-        Dir.chdir(directory) do |dir|
-          fetcher = Fetcher.new(vendor_url, '')
-          fetcher.fetch_untar("#{name}.tgz")
-        end
+        source_dir = File.join(buildpack_dir, 'plugins', name)
+        system "rsync", "-a", source_dir, directory.to_s
       end
     end
   end

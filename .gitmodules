@@ -1,3 +1,6 @@
 [submodule "compile-extensions"]
 	path = compile-extensions
 	url = https://github.com/cloudfoundry/compile-extensions
+[submodule "plugins/rails_log_stdout"]
+	path = plugins/rails_log_stdout
+	url = git@github.com:heroku/rails_log_stdout.git
