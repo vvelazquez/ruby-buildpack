@@ -77,6 +77,12 @@ WARNING
         precompile = rake.task("assets:precompile")
         return true unless precompile.is_defined?
 
+        puts `pwd`
+        puts `echo $PATH`
+        puts `ls -la /tmp/app/bin`
+        puts `/tmp/app/bin/node -v`
+        puts `/tmp/app/bin/npm -v`
+
         topic("Preparing app for Rails asset pipeline")
 
         @cache.load_without_overwrite public_assets_folder

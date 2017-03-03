@@ -278,6 +278,8 @@ puts "Using Java Memory: #{ENV["JAVA_MEM"]}"
         ENV["JRUBY_OPTS"] = env('JRUBY_BUILD_OPTS') || env('JRUBY_OPTS')
       end
       setup_ruby_install_env
+
+      ENV["PATH"]     = default_path
       ENV["PATH"] += ":#{node_preinstall_bin_path}" if node_js_installed?
 
       # TODO when buildpack-env-args rolls out, we can get rid of
@@ -288,7 +290,6 @@ puts "Using Java Memory: #{ENV["JAVA_MEM"]}"
 
       ENV["GEM_PATH"] = slug_vendor_base
       ENV["GEM_HOME"] = slug_vendor_base
-      ENV["PATH"]     = default_path
     end
   end
 
