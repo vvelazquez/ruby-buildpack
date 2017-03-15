@@ -5,6 +5,8 @@ default_versions:
   version: 2.3.3
 - name: node
   version: 4.8.0
+- name: yarn
+  version: 0.21.3
 url_to_dependency_map:
 - match: ruby-(.*?)-jruby-(.*?)\.tgz
   name: jruby
@@ -21,6 +23,9 @@ url_to_dependency_map:
 - match: node
   name: node
   version: 4.8.0
+- match: yarn
+  name: yarn
+  version: 0.21.3
 dependency_deprecation_dates:
 - match: 4\.\d+\.\d+
   version_line: '4'
@@ -111,6 +116,12 @@ dependencies:
   version: 4.8.0
   uri: https://buildpacks.cloudfoundry.org/dependencies/node/node-4.8.0-linux-x64-4678bae6.tgz
   md5: 4678bae6cec2321a5e4228c026d5d654
+  cf_stacks:
+  - cflinuxfs2
+- name: yarn
+  version: 0.21.3
+  uri: https://buildpacks.cloudfoundry.org/dependencies/yarn/yarn-v0.21.3-779e0c86.tar.gz
+  md5: 779e0c868fbc2c8235d20755890202fc
   cf_stacks:
   - cflinuxfs2
 exclude_files:

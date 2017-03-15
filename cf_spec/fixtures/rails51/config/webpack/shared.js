@@ -6,7 +6,7 @@ const process = require('process')
 const glob = require('glob')
 const extname = require('path-complete-extname')
 
-let distDir = process.env.WEBPACK_DIST_DIR
+var distDir = process.env.WEBPACK_DIST_DIR
 
 if (distDir === undefined) {
   distDir = 'packs'
