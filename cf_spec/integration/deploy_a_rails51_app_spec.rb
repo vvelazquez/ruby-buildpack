@@ -21,8 +21,8 @@ describe 'Rails 5.1 App' do
 
       expect(app).not_to have_internet_traffic
       expect(app).to have_logged /Downloaded \[file:\/\/.*\]/
+      expect(app).to have_logged /Started GET "\/" for/
     end
-
   end
 
   context 'in an online environment', :uncached do
@@ -34,6 +34,7 @@ describe 'Rails 5.1 App' do
       browser.visit_path('/')
       expect(browser).to have_body('Hello World')
       expect(app).to have_logged /Downloaded \[https:\/\/.*\]/
+      expect(app).to have_logged /Started GET "\/" for/
     end
   end
 end
