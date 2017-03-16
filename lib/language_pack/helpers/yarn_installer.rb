@@ -8,12 +8,7 @@ class LanguagePack::YarnInstaller
       Dir.chdir(binary_path) do
         fetcher.fetch_untar("#{binary_path}.tar.gz", "--strip-components 1")
       end
-
-      puts "Just Extracted Yarn"
-      system('pwd')
-      system('ls -l')
     end
-    system('pwd')
 
     FileUtils.ln_s("../vendor/#{binary_path}/bin/yarn", "yarn", :force => true)
   end

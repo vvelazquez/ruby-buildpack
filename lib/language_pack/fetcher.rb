@@ -39,12 +39,7 @@ module LanguagePack
       fetch(path)
       tar_command = "tar zxf #{path} #{files_to_extract} && rm #{path}"
 
-      puts "Tar: #{tar_command}"
-      puts `ls -l`
-
       run!(tar_command, error_class: FetchError)
-
-      puts `ls -l`
     end
 
     private
