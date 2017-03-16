@@ -37,7 +37,7 @@ class LanguagePack::NodeInstaller
 
   def rails51?
     bundler = LanguagePack::Helpers::BundlerWrapper.new.install
-    rails_version = bundler.gem_version('railties')
+    rails_version = bundler.gem_version('railties') rescue nil
     rails_version && rails_version >= Gem::Version.new('5.1.0.beta')
   end
 end
