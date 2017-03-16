@@ -1,6 +1,7 @@
 require 'securerandom'
 require "language_pack"
 require "language_pack/rails42"
+require "language_pack/shell_helpers"
 
 class LanguagePack::Rails5 < LanguagePack::Rails42
   # @return [Boolean] true if it's a Rails 5.x app
@@ -29,5 +30,19 @@ class LanguagePack::Rails5 < LanguagePack::Rails42
 
   def install_plugins
     # do not install plugins, do not call super, do not warn
+  end
+
+
+## TODO ; create Rails51 and add to set
+
+  include LanguagePack::ShellHelpers
+  def run_assets_precompile_rake_task
+    instrument "rails5.run_assets_precompile_rake_task" do
+      if File.exists?('bin/yarn') && File.exists?('yarn.lock')
+        run!("./bin/yarn install")
+      end
+
+      super
+    end
   end
 end
