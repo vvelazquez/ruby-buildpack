@@ -10,7 +10,12 @@ class LanguagePack::NoLockfile < LanguagePack::Base
     "Ruby/NoLockfile"
   end
 
-  def compile
-    error "Gemfile.lock required. Please check it in."
+  def supply
+    ## TODO ; we should probably give defaults??
+    error "gemfile.lock required. please check it in."
+  end
+
+  def finalize
+    error "gemfile.lock required. please check it in."
   end
 end

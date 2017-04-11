@@ -8,6 +8,7 @@ require "language_pack/ruby_version"
 require "language_pack/helpers/node_installer"
 require "language_pack/helpers/yarn_installer"
 require "language_pack/helpers/jvm_installer"
+require "language_pack/helpers/bundler_installer"
 require "language_pack/version"
 
 # base Ruby Language Pack. This is for any base ruby app.
@@ -26,18 +27,19 @@ class LanguagePack::Ruby < LanguagePack::Base
   end
 
   def self.bundler
-    @@bundler ||= LanguagePack::Helpers::BundlerWrapper.new.install
+    @@bundler ||= LanguagePack::Helpers::BundlerWrapper.new
   end
 
   def bundler
     self.class.bundler
   end
 
-  def initialize(build_path, cache_path=nil)
-    super(build_path, cache_path)
+  def initialize(build_path, cache_path=nil, dep_dir=nil)
+    super(build_path, cache_path, dep_dir)
     @fetchers[:mri]    = LanguagePack::Fetcher.new(VENDOR_URL, @stack)
-    @node_installer    = LanguagePack::NodeInstaller.new(@stack)
-    @yarn_installer    = LanguagePack::YarnInstaller.new(@stack)
+    @bundler_installer = LanguagePack::BundlerInstaller.new(dep_dir, @stack)
+    @node_installer    = LanguagePack::NodeInstaller.new(dep_dir, @stack)
+    @yarn_installer    = LanguagePack::YarnInstaller.new(dep_dir, @stack)
     @jvm_installer     = LanguagePack::JvmInstaller.new(slug_vendor_jvm, @stack)
   end
 
@@ -75,24 +77,36 @@ class LanguagePack::Ruby < LanguagePack::Base
 
   def best_practice_warnings; end
 
-  def compile
-    instrument 'ruby.compile' do
+  def supply
+    ## TODO - does metatdata work?
+    instrument 'ruby.supply' do
       # check for new app at the beginning of the compile
       new_app?
       Dir.chdir(build_path)
-      remove_vendor_bundle
       warn_bundler_upgrade
+      install_bundler('/tmp/app2/.cloudfoundry/0/bundler-1.14.6/')
       install_ruby
+      install_bundler('/tmp/app2/.cloudfoundry/0/ruby-2.3.4/lib/ruby/gems/2.3.0/')
       install_jvm
+      install_binaries
       setup_language_pack_environment
+      ## TODO Next two in supply and merged
       setup_export
       setup_profiled
+      super
+    end
+  end
+
+  def finalize
+    instrument 'ruby.finaize' do
+      new_app?
+      Dir.chdir(build_path)
+      remove_vendor_bundle
       allow_git do
-        install_bundler_in_app
+        install_bundler_in_app ## TODO Couldn't it just start somewhere good
         build_bundler
         post_bundler
         create_database_yml
-        install_binaries
         run_assets_precompile_rake_task
       end
       best_practice_warnings
@@ -163,13 +177,13 @@ WARNING
   # the relative path to the vendored ruby directory
   # @return [String] resulting path
   def slug_vendor_ruby
-    "vendor/#{ruby_version.version_without_patchlevel}"
+    "#{dep_dir_abs}/#{ruby_version.version_without_patchlevel}"
   end
 
   # the relative path to the vendored jvm
   # @return [String] resulting path
   def slug_vendor_jvm
-    "vendor/jvm"
+    "#{dep_dir_abs}/jvm"
   end
 
   # the absolute path of the build ruby to use during the buildpack
@@ -286,8 +300,8 @@ puts "Using Java Memory: #{ENV["JAVA_MEM"]}"
         ENV[key] ||= value
       end
 
-      ENV["GEM_PATH"] = slug_vendor_base
-      ENV["GEM_HOME"] = slug_vendor_base
+      ENV["GEM_PATH"] = "#{@dep_dir_abs}/bundler-1.14.6:#{slug_vendor_base}"
+      ENV["GEM_HOME"] = "#{@dep_dir_abs}/bundler-1.14.6:#{slug_vendor_base}"
       ENV["PATH"]     = default_path
     end
   end
@@ -328,6 +342,12 @@ puts "Using Java Memory: #{ENV["JAVA_MEM"]}"
     end
   end
 
+  def install_bundler
+    instrument 'ruby.install_bundler' do
+      @bundler_installer.install
+    end
+  end
+
   # install the vendored ruby
   # @return [Boolean] true if it installs the vendored ruby and false otherwise
   def install_ruby
@@ -358,13 +378,15 @@ ERROR
         end
       end
 
-      app_bin_dir = "bin"
+      app_bin_dir = "#{dep_dir}/bin"
       FileUtils.mkdir_p app_bin_dir
 
       run("ln -s ruby #{slug_vendor_ruby}/bin/ruby.exe")
 
+      app_bin_dir = Pathname.new(app_bin_dir)
       Dir["#{slug_vendor_ruby}/bin/*"].each do |vendor_bin|
-        run("ln -s ../#{vendor_bin} #{app_bin_dir}")
+        vendor_bin = Pathname.new(vendor_bin).relative_path_from(app_bin_dir)
+        run("ln -s #{vendor_bin} #{app_bin_dir}")
       end
 
       @metadata.write("buildpack_ruby_version", ruby_version.version_for_download)

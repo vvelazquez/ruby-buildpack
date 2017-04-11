@@ -18,16 +18,18 @@ class LanguagePack::Base
   VENDOR_URL           = ENV['BUILDPACK_VENDOR_URL'] || "https://buildpacks.cloudfoundry.org/dependencies/ruby"
   ROOT_DIR             = File.expand_path("../../..", __FILE__)
 
-  attr_reader :build_path, :cache
+  attr_reader :build_path, :cache, :dep_dir, :dep_dir_abs
 
   # changes directory to the build_path
   # @param [String] the path of the build dir
   # @param [String] the path of the cache dir this is nil during detect and release
-  def initialize(build_path, cache_path=nil)
+  def initialize(build_path, cache_path=nil, dep_dir=nil)
      self.class.instrument "base.initialize" do
       @build_path    = build_path
       @stack         = ENV.fetch("STACK")
       @cache         = LanguagePack::Cache.new(cache_path) if cache_path
+      @dep_dir       = dep_dir
+      @dep_dir_abs   = File.expand_path(dep_dir) if dep_dir
       @metadata      = LanguagePack::Metadata.new(@cache)
       @bundler_cache = LanguagePack::BundlerCache.new(@cache, @stack)
       @id            = Digest::SHA1.hexdigest("#{Time.now.to_f}-#{rand(1000000)}")[0..10]
@@ -77,9 +79,25 @@ class LanguagePack::Base
   end
 
   # this is called to build the slug
-  def compile
+  def supply
+    instrument 'base.supply' do
+      Kernel.puts ""
+      @warnings.each do |warning|
+        Kernel.puts "###### WARNING:"
+        puts warning
+        Kernel.puts ""
+      end
+      if @deprecations.any?
+        topic "DEPRECATIONS:"
+        puts @deprecations.join("\n")
+      end
+    end
+  end
+
+  # this is called to build the slug
+  def finalize
     write_release_yaml
-    instrument 'base.compile' do
+    instrument 'base.finalize' do
       Kernel.puts ""
       @warnings.each do |warning|
         Kernel.puts "###### WARNING:"
@@ -144,20 +162,23 @@ private ##################################
   end
 
   def add_to_profiled(string)
-    FileUtils.mkdir_p "#{build_path}/.profile.d"
-    File.open("#{build_path}/.profile.d/ruby.sh", "a") do |file|
+    FileUtils.mkdir_p "#{dep_dir}/profile.d"
+    File.open("#{dep_dir}/profile.d/ruby.sh", "a") do |file|
       file.puts string
     end
   end
 
+  ## TODO Remove ?
   def set_env_default(key, val)
     add_to_profiled "export #{key}=${#{key}:-#{val}}"
   end
 
+  ## TODO Remove ?
   def set_env_override(key, val)
     add_to_profiled %{export #{key}="#{val.gsub('"','\"')}"}
   end
 
+  ## TODO Remove ?
   def add_to_export(string)
     export = File.join(ROOT_DIR, "export")
     File.open(export, "a") do |file|
@@ -165,10 +186,12 @@ private ##################################
     end
   end
 
+  ## TODO Remove ?
   def set_export_default(key, val)
     add_to_export "export #{key}=${#{key}:-#{val}}"
   end
 
+  ## TODO Remove ?
   def set_export_override(key, val)
     add_to_export %{export #{key}="#{val.gsub('"','\"')}"}
   end

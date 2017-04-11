@@ -1,3 +1,5 @@
+require 'bundler'
+
 class LanguagePack::Helpers::BundlerWrapper
   include LanguagePack::ShellHelpers
 
@@ -29,25 +31,6 @@ class LanguagePack::Helpers::BundlerWrapper
     @path                 = Pathname.new "#{@bundler_path}/gems/#{BUNDLER_DIR_NAME}/lib"
   end
 
-  def install
-    fetch_bundler
-    $LOAD_PATH << @path
-    require "bundler"
-    self
-  end
-
-  def clean
-    ENV['BUNDLE_GEMFILE'] = @orig_bundle_gemfile
-    FileUtils.remove_entry_secure(@bundler_tmp) if Dir.exist?(@bundler_tmp)
-
-    if LanguagePack::Ruby::BUNDLER_VERSION  == "1.7.12"
-      # Hack to cleanup after pre 1.8 versions of bundler. See https://github.com/bundler/bundler/pull/3277/
-      Dir["#{Dir.tmpdir}/bundler*"].each do |dir|
-        FileUtils.remove_entry_secure(dir) if Dir.exist?(dir) && File.stat(dir).writable?
-      end
-    end
-  end
-
   def has_gem?(name)
     specs.key?(name)
   end
@@ -61,7 +44,7 @@ class LanguagePack::Helpers::BundlerWrapper
   end
 
   # detects whether the Gemfile.lock contains the Windows platform
-  # @return [Boolean] true if the Gemfile.lock was created on Windows
+  # @return [Boolean] true iBundlerf the Gemfile.lock was created on Windows
   def windows_gemfile_lock?
     platforms.detect do |platform|
       /mingw|mswin/.match(platform.os) if platform.is_a?(Gem::Platform)
@@ -86,17 +69,13 @@ class LanguagePack::Helpers::BundlerWrapper
 
   def ruby_version
     instrument 'detect_ruby_version' do
-      env = { "PATH"     => "#{bundler_path}/bin:#{ENV['PATH']}",
-              "RUBYLIB"  => File.join(bundler_path, "gems", BUNDLER_DIR_NAME, "lib"),
-              "GEM_PATH" => "#{bundler_path}:#{ENV["GEM_PATH"]}"
-            }
       command = "bundle platform --ruby"
 
       # Silently check for ruby version
-      output  = run_stdout(command, user_env: true, env: env)
+      output  = run_stdout(command)
 
       # If there's a gem in the Gemfile (i.e. syntax error) emit error
-      raise GemfileParseError.new(run("bundle check", user_env: true, env: env)) unless $?.success?
+      raise GemfileParseError.new(run("bundle check")) unless $?.success?
       if output.match(/No ruby version specified/)
         ""
       else
