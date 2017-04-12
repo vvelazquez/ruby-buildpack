@@ -183,7 +183,7 @@ WARNING
   # the relative path to the vendored jvm
   # @return [String] resulting path
   def slug_vendor_jvm
-    "vendor/jvm"
+    "#{@dep_dir}/jvm"
   end
 
   # the absolute path of the build ruby to use during the buildpack
