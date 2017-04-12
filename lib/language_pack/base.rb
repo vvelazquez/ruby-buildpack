@@ -77,7 +77,11 @@ class LanguagePack::Base
   end
 
   # this is called to build the slug
-  def compile
+  def supply
+    raise "must subclass"
+  end
+
+  def finalize
     write_release_yaml
     instrument 'base.compile' do
       Kernel.puts ""
@@ -91,6 +95,10 @@ class LanguagePack::Base
         puts @deprecations.join("\n")
       end
     end
+  end
+
+  def compile
+    raise "Should no longer be used, see supply/finalize"
   end
 
   def write_release_yaml

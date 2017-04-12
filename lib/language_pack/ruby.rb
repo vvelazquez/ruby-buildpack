@@ -75,8 +75,8 @@ class LanguagePack::Ruby < LanguagePack::Base
 
   def best_practice_warnings; end
 
-  def compile
-    instrument 'ruby.compile' do
+  def supply
+    instrument 'ruby.supply' do
       # check for new app at the beginning of the compile
       new_app?
       Dir.chdir(build_path)
@@ -85,19 +85,34 @@ class LanguagePack::Ruby < LanguagePack::Base
       warn_windows_gemfile_endline
       install_ruby
       install_jvm
+      install_binaries
       setup_language_pack_environment
       setup_export
       setup_profiled
+    end
+  end
+
+  def finalize
+    instrument 'ruby.finalize' do
+      # check for new app at the beginning of the compile
+      new_app?
+      Dir.chdir(build_path)
       allow_git do
         install_bundler_in_app
         build_bundler
         post_bundler
         create_database_yml
-        install_binaries
         run_assets_precompile_rake_task
       end
       best_practice_warnings
       super
+    end
+  end
+
+  def compile
+    instrument 'ruby.compile' do
+      supply
+      finalize
     end
   end
 
