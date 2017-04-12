@@ -85,7 +85,6 @@ class LanguagePack::Ruby < LanguagePack::Base
       install_ruby
       install_jvm
       install_binaries
-      setup_language_pack_environment
       setup_export
       setup_profiled
     end
@@ -279,53 +278,25 @@ EOF
     "-Xmx${JVM_MAX_HEAP:-384}m"
   end
 
-  # sets up the environment variables for the build process
-  def setup_language_pack_environment
-    instrument 'ruby.setup_language_pack_environment' do
-      if ruby_version.jruby?
-        ENV["PATH"] += ":#{@dep_dir}/bin:bin"
-        ENV["JAVA_MEM"] = run(<<-SHELL).chomp
-#{set_jvm_max_heap}
-echo #{default_java_mem}
-SHELL
-puts "Using Java Memory: #{ENV["JAVA_MEM"]}"
-        ENV["JRUBY_OPTS"] = env('JRUBY_BUILD_OPTS') || env('JRUBY_OPTS')
-      end
-      setup_ruby_install_env
-      ENV["PATH"] += ":#{node_preinstall_bin_path}" if node_js_installed?
-
-      # TODO when buildpack-env-args rolls out, we can get rid of
-      # ||= and the manual setting below
-      config_vars = default_config_vars.each do |key, value|
-        ENV[key] ||= value
-      end
-
-      ENV["GEM_PATH"] = slug_vendor_base
-      ENV["GEM_HOME"] = slug_vendor_base
-      ENV["PATH"]     = default_path
-    end
-  end
-
   # Sets up the environment variables for subsequent processes run by
   # muiltibuildpack. We can't use profile.d because $HOME isn't set up
   def setup_export
     instrument 'ruby.setup_export' do
-      paths = ENV["PATH"].split(":")
-      set_export_override "GEM_PATH", "#{build_path}/#{slug_vendor_base}:$GEM_PATH"
-      set_export_default  "LANG",     "en_US.UTF-8"
-      set_export_override "PATH",     paths.map { |path| /^\/.*/ !~ path ? "#{build_path}/#{path}" : path }.join(":")
+      write_env_file "GEM_PATH", "#{build_path}/#{slug_vendor_base}:$GEM_PATH"
+      write_env_file  "LANG",     "en_US.UTF-8"
 
       if ruby_version.jruby?
-        add_to_export set_jvm_max_heap
-        add_to_export set_java_mem
-        set_export_default "JAVA_OPTS",  default_java_opts
-        set_export_default "JRUBY_OPTS", default_jruby_opts
+        # add_to_export set_jvm_max_heap
+        # add_to_export set_java_mem
+        write_env_file "JAVA_OPTS",  default_java_opts
+        write_env_file "JRUBY_OPTS", default_jruby_opts
       end
     end
   end
 
   # sets up the profile.d script for this buildpack
   def setup_profiled
+    return ## TODO make this method work and remove this line
     instrument 'setup_profiled' do
       set_env_default  "LANG",     "en_US.UTF-8"
       set_env_override "GEM_PATH", "$HOME/#{slug_vendor_base}:$GEM_PATH"
@@ -339,6 +310,8 @@ puts "Using Java Memory: #{ENV["JAVA_MEM"]}"
         set_env_default "JAVA_OPTS", default_java_opts
         set_env_default "JRUBY_OPTS", default_jruby_opts
       end
+
+      set_env_default  "LD_LIBRARY_PATH", "$HOME/ld_library_path"
     end
   end
 
@@ -412,7 +385,7 @@ ERROR
   end
 
   def new_app?
-    @new_app ||= !File.exist?("vendor/.cloudfoundry/metadata")
+    @new_app ||= !File.exist?("vendor/.cloudfoundry/metadata/stack")
   end
 
   # vendors JVM into the slug for JRuby
@@ -435,17 +408,6 @@ ERROR
       else
         ""
       end
-  end
-
-  # setup the environment so we can use the vendored ruby
-  def setup_ruby_install_env
-    instrument 'ruby.setup_ruby_install_env' do
-      ENV["PATH"] = "#{ruby_install_binstub_path}:#{ENV["PATH"]}"
-
-      if ruby_version.jruby?
-        ENV['JAVA_OPTS']  = default_java_opts
-      end
-    end
   end
 
   # installs vendored gems into the slug
@@ -871,5 +833,10 @@ params = CGI.parse(uri.query || "")
       # need to reinstall language pack gems
       install_bundler_in_app
     end
+  end
+
+  def write_env_file(key, value)
+    FileUtils.mkdir_p("#{@dep_dir}/env")
+    File.write("#{@dep_dir}/env/#{key}", value)
   end
 end

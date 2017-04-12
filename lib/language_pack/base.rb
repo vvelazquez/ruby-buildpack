@@ -26,7 +26,7 @@ class LanguagePack::Base
   def initialize(build_path, cache_path=nil, dep_dir="vendor")
      self.class.instrument "base.initialize" do
       @build_path    = build_path
-      @stack         = ENV.fetch("STACK")
+      @stack         = ENV.fetch("CF_STACK", 'Unknown')
       @dep_dir       = dep_dir
       @cache         = LanguagePack::Cache.new(cache_path) if cache_path
       @metadata      = LanguagePack::Metadata.new(@cache)
@@ -168,21 +168,6 @@ private ##################################
 
   def set_env_override(key, val)
     add_to_profiled %{export #{key}="#{val.gsub('"','\"')}"}
-  end
-
-  def add_to_export(string)
-    export = File.join(ROOT_DIR, "export")
-    File.open(export, "a") do |file|
-      file.puts string
-    end
-  end
-
-  def set_export_default(key, val)
-    add_to_export "export #{key}=${#{key}:-#{val}}"
-  end
-
-  def set_export_override(key, val)
-    add_to_export %{export #{key}="#{val.gsub('"','\"')}"}
   end
 
   def log_internal(*args)
