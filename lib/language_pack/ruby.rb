@@ -98,6 +98,7 @@ class LanguagePack::Ruby < LanguagePack::Base
       new_app?
       Dir.chdir(build_path)
       remove_vendor_bundle
+      link_supplied_binaries_in_app
       allow_git do
         install_bundler_in_app
         build_bundler
@@ -366,13 +367,12 @@ ERROR
         end
       end
 
-      app_bin_dir = "bin"
-      FileUtils.mkdir_p app_bin_dir
-
       run("ln -s ruby #{slug_vendor_ruby}/bin/ruby.exe")
-
-      Dir["#{slug_vendor_ruby}/bin/*"].each do |vendor_bin|
-        run("ln -s ../#{vendor_bin} #{app_bin_dir}")
+      dest = Pathname.new("#{@dep_dir}/bin")
+      FileUtils.mkdir_p(dest.to_s)
+      Dir["#{slug_vendor_ruby}/bin/*"].each do |bin|
+        relative_bin = Pathname.new(bin).relative_path_from(dest).to_s
+        run("ln -s #{relative_bin} #{dest}/#{File.basename(bin)}")
       end
 
       @metadata.write("buildpack_ruby_version", ruby_version.version_for_download)
@@ -404,6 +404,15 @@ ERROR
     message << error.message
 
     error message
+  end
+
+  def link_supplied_binaries_in_app
+    dest = Pathname.new("#{build_path}/bin")
+    FileUtils.mkdir_p(dest.to_s)
+    Dir["#{@dep_dir}/bin/*"].each do |bin|
+      relative_bin = Pathname.new(bin).relative_path_from(dest).to_s
+      run("ln -s #{relative_bin} #{dest}/#{File.basename(bin)}")
+    end
   end
 
   def new_app?
