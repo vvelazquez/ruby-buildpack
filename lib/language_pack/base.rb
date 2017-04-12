@@ -98,7 +98,10 @@ class LanguagePack::Base
   end
 
   def compile
-    raise "Should no longer be used, see supply/finalize"
+    instrument 'base.compile' do
+      supply
+      finalize
+    end
   end
 
   def write_release_yaml

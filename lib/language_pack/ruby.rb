@@ -109,13 +109,6 @@ class LanguagePack::Ruby < LanguagePack::Base
     end
   end
 
-  def compile
-    instrument 'ruby.compile' do
-      supply
-      finalize
-    end
-  end
-
 private
 
   def warn_bundler_upgrade
