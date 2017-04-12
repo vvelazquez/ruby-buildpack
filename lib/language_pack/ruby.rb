@@ -34,11 +34,10 @@ class LanguagePack::Ruby < LanguagePack::Base
   end
 
   def initialize(build_path, cache_path=nil, dep_dir = "vendor")
-    super(build_path, cache_path)
+    super(build_path, cache_path, dep_dir)
     @fetchers[:mri]    = LanguagePack::Fetcher.new(VENDOR_URL, @stack)
-    @dep_dir = dep_dir
-    @node_installer    = LanguagePack::NodeInstaller.new(@stack)
-    @yarn_installer    = LanguagePack::YarnInstaller.new(@stack)
+    @node_installer    = LanguagePack::NodeInstaller.new(dep_dir, @stack)
+    @yarn_installer    = LanguagePack::YarnInstaller.new(dep_dir, @stack)
     @jvm_installer     = LanguagePack::JvmInstaller.new(slug_vendor_jvm, @stack)
   end
 
@@ -367,12 +366,12 @@ ERROR
         end
       end
 
-      run("ln -s ruby #{slug_vendor_ruby}/bin/ruby.exe")
+      FileUtils.ln_s("ruby", "#{slug_vendor_ruby}/bin/ruby.exe")
       dest = Pathname.new("#{@dep_dir}/bin")
       FileUtils.mkdir_p(dest.to_s)
       Dir["#{slug_vendor_ruby}/bin/*"].each do |bin|
         relative_bin = Pathname.new(bin).relative_path_from(dest).to_s
-        run("ln -s #{relative_bin} #{dest}/#{File.basename(bin)}")
+        FileUtils.ln_s(relative_bin, "#{dest}/#{File.basename(bin)}")
       end
 
       @metadata.write("buildpack_ruby_version", ruby_version.version_for_download)
@@ -406,12 +405,13 @@ ERROR
     error message
   end
 
+  ## TODO ; Should this exist? Should it force: true ?
   def link_supplied_binaries_in_app
     dest = Pathname.new("#{build_path}/bin")
     FileUtils.mkdir_p(dest.to_s)
     Dir["#{@dep_dir}/bin/*"].each do |bin|
       relative_bin = Pathname.new(bin).relative_path_from(dest).to_s
-      run("ln -s #{relative_bin} #{dest}/#{File.basename(bin)}")
+      FileUtils.ln_s(relative_bin, "#{dest}/#{File.basename(bin)}", force: true)
     end
   end
 

@@ -23,10 +23,11 @@ class LanguagePack::Base
   # changes directory to the build_path
   # @param [String] the path of the build dir
   # @param [String] the path of the cache dir this is nil during detect and release
-  def initialize(build_path, cache_path=nil)
+  def initialize(build_path, cache_path=nil, dep_dir="vendor")
      self.class.instrument "base.initialize" do
       @build_path    = build_path
       @stack         = ENV.fetch("STACK")
+      @dep_dir       = dep_dir
       @cache         = LanguagePack::Cache.new(cache_path) if cache_path
       @metadata      = LanguagePack::Metadata.new(@cache)
       @bundler_cache = LanguagePack::BundlerCache.new(@cache, @stack)
