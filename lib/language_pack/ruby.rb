@@ -38,7 +38,7 @@ class LanguagePack::Ruby < LanguagePack::Base
     @fetchers[:mri]    = LanguagePack::Fetcher.new(VENDOR_URL, @stack)
     @node_installer    = LanguagePack::NodeInstaller.new(dep_dir, @stack)
     @yarn_installer    = LanguagePack::YarnInstaller.new(dep_dir, @stack)
-    @jvm_installer     = LanguagePack::JvmInstaller.new(slug_vendor_jvm, @stack)
+    @jvm_installer     = LanguagePack::JvmInstaller.new(dep_dir, @stack)
   end
 
   def name
@@ -283,7 +283,7 @@ EOF
   def setup_language_pack_environment
     instrument 'ruby.setup_language_pack_environment' do
       if ruby_version.jruby?
-        ENV["PATH"] += ":bin"
+        ENV["PATH"] += ":#{@dep_dir}/bin:bin"
         ENV["JAVA_MEM"] = run(<<-SHELL).chomp
 #{set_jvm_max_heap}
 echo #{default_java_mem}

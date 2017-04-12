@@ -33,10 +33,10 @@ class LanguagePack::JvmInstaller
 
     fetch_untar(JVM_1_8_PATH, "openjdk-8")
 
-    File.chdir(@dep_dir) do
-      FileUtils.mkdir_p "bin"
-      Dir["#{@vendor_dir}/bin/*"].each do |bin|
-        FileUtils.ln_s("../#{bin}", "bin/")
+    FileUtils.mkdir_p "#{@dep_dir}/bin"
+    Dir.chdir("#{@dep_dir}/bin") do
+      Dir["../jvm/bin/*"].each do |bin|
+        FileUtils.ln_s(bin, File.basename(bin))
       end
     end
   end
