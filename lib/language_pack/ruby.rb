@@ -33,9 +33,10 @@ class LanguagePack::Ruby < LanguagePack::Base
     self.class.bundler
   end
 
-  def initialize(build_path, cache_path=nil)
+  def initialize(build_path, cache_path=nil, dep_dir = "vendor")
     super(build_path, cache_path)
     @fetchers[:mri]    = LanguagePack::Fetcher.new(VENDOR_URL, @stack)
+    @dep_dir = dep_dir
     @node_installer    = LanguagePack::NodeInstaller.new(@stack)
     @yarn_installer    = LanguagePack::YarnInstaller.new(@stack)
     @jvm_installer     = LanguagePack::JvmInstaller.new(slug_vendor_jvm, @stack)
@@ -180,7 +181,7 @@ WARNING
   # the relative path to the vendored ruby directory
   # @return [String] resulting path
   def slug_vendor_ruby
-    "vendor/#{ruby_version.version_without_patchlevel}"
+    "#{@dep_dir}/#{ruby_version.version_without_patchlevel}"
   end
 
   # the relative path to the vendored jvm
@@ -350,16 +351,6 @@ puts "Using Java Memory: #{ENV["JAVA_MEM"]}"
   def install_ruby
     instrument 'ruby.install_ruby' do
       return false unless ruby_version
-
-      if ruby_version.build?
-        FileUtils.mkdir_p(build_ruby_path)
-        Dir.chdir(build_ruby_path) do
-          ruby_vm = "ruby"
-          instrument "ruby.fetch_build_ruby" do
-            @fetchers[:mri].fetch_untar("#{ruby_version.version_for_download.sub(ruby_vm, "#{ruby_vm}-build")}.tgz")
-          end
-        end
-      end
 
       FileUtils.mkdir_p(slug_vendor_ruby)
       Dir.chdir(slug_vendor_ruby) do
