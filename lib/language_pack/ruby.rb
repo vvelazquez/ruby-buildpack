@@ -80,7 +80,6 @@ class LanguagePack::Ruby < LanguagePack::Base
       # check for new app at the beginning of the compile
       new_app?
       Dir.chdir(build_path)
-      remove_vendor_bundle
       warn_bundler_upgrade
       warn_windows_gemfile_endline
       install_ruby
@@ -97,6 +96,7 @@ class LanguagePack::Ruby < LanguagePack::Base
       # check for new app at the beginning of the compile
       new_app?
       Dir.chdir(build_path)
+      remove_vendor_bundle
       allow_git do
         install_bundler_in_app
         build_bundler
