@@ -22,6 +22,7 @@ require 'cloud_foundry/language_pack/extensions'
 
 dep_dir = "#{build_dir}/.cloudfoundry/0"
 FileUtils.mkdir_p(dep_dir)
+LanguagePack::Helpers::BundlerWrapper.dep_dir = dep_dir
 
 begin
   LanguagePack::Instrument.trace 'compile', 'app.compile' do
