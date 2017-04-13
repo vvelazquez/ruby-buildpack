@@ -334,6 +334,14 @@ ERROR
         end
       end
 
+      ## Change rake hashbang
+      if File.exists?("#{slug_vendor_ruby}/bin/rake")
+        rake_contents = File.read("#{slug_vendor_ruby}/bin/rake")
+        if rake_contents.gsub!(%r{/app/vendor/.*/bin/ruby}, '/usr/bin/env ruby')
+          File.write("#{slug_vendor_ruby}/bin/rake", rake_contents)
+        end
+      end
+
       FileUtils.ln_s("ruby", "#{slug_vendor_ruby}/bin/ruby.exe")
       dest = Pathname.new("#{@dep_dir}/bin")
       FileUtils.mkdir_p(dest.to_s)
