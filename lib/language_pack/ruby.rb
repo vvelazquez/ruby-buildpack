@@ -296,7 +296,6 @@ EOF
 
   # sets up the profile.d script for this buildpack
   def setup_profiled
-    return ## TODO make this method work and remove this line
     instrument 'setup_profiled' do
       set_env_default  "LANG",     "en_US.UTF-8"
       set_env_override "GEM_PATH", "$HOME/#{slug_vendor_base}:$GEM_PATH"
