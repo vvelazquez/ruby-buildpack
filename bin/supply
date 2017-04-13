@@ -43,6 +43,7 @@ begin
         pack.supply
       end
     end
+    system("#{compile_extensions_dir}/bin/write_config_yml #{buildpack_dir} #{dep_dir}") or raise 'Could not write config.yml'
   end
 rescue Exception => e
   Kernel.puts " !"

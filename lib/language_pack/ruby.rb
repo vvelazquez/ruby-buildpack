@@ -85,6 +85,7 @@ class LanguagePack::Ruby < LanguagePack::Base
       install_ruby
       install_jvm
       install_binaries
+      setup_supply_environment
       setup_export
       setup_profiled
     end
@@ -276,6 +277,11 @@ EOF
   # return [String] string of Java Xmx
   def default_java_mem
     "-Xmx${JVM_MAX_HEAP:-384}m"
+  end
+
+  # we need this so supply and finalize use the same ruby when they call slug_vendor_base
+  def setup_supply_environment
+    ENV['PATH'] = "#{@dep_dir}/bin:#{ENV['PATH']}"
   end
 
   # Sets up the environment variables for subsequent processes run by

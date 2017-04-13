@@ -156,8 +156,8 @@ private ##################################
   end
 
   def add_to_profiled(string)
-    FileUtils.mkdir_p "#{build_path}/.profile.d"
-    File.open("#{build_path}/.profile.d/ruby.sh", "a") do |file|
+    FileUtils.mkdir_p "#{@dep_dir}/profile.d"
+    File.open("#{@dep_dir}/profile.d/ruby.sh", "a") do |file|
       file.puts string
     end
   end
