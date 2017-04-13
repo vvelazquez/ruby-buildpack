@@ -42,6 +42,7 @@ begin
         pack.finalize
       end
     end
+    system("#{compile_extensions_dir}/bin/write_profiled_from_supply #{deps_dir} #{build_dir}") or raise 'Could not write .profile.d script'
     system("#{compile_extensions_dir}/bin/store_buildpack_metadata #{buildpack_dir} #{cache_dir}")
   end
 rescue Exception => e
