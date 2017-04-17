@@ -23,7 +23,7 @@ class LanguagePack::Base
   # changes directory to the build_path
   # @param [String] the path of the build dir
   # @param [String] the path of the cache dir this is nil during detect and release
-  def initialize(build_path, cache_path=nil, dep_dir="vendor")
+  def initialize(build_path, cache_path=nil, dep_dir)
      self.class.instrument "base.initialize" do
       @build_path    = build_path
       @stack         = ENV.fetch("CF_STACK", 'Unknown')

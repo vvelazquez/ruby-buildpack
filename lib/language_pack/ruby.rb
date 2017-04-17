@@ -71,7 +71,7 @@ class LanguagePack::Ruby < LanguagePack::Base
 
   def supply
     instrument 'ruby.supply' do
-      # check for new app at the beginning of the compile
+      # check for new app at the beginning of supply
       new_app?
       Dir.chdir(build_path)
       warn_bundler_upgrade
@@ -87,7 +87,7 @@ class LanguagePack::Ruby < LanguagePack::Base
 
   def finalize
     instrument 'ruby.finalize' do
-      # check for new app at the beginning of the compile
+      # check for new app at the beginning of finalize
       new_app?
       Dir.chdir(build_path)
       remove_vendor_bundle
@@ -356,7 +356,6 @@ ERROR
     error message
   end
 
-  ## TODO ; Should this exist? Should it force: true ?
   def link_supplied_binaries_in_app
     dest = Pathname.new("#{build_path}/bin")
     FileUtils.mkdir_p(dest.to_s)
@@ -767,5 +766,4 @@ params = CGI.parse(uri.query || "")
       install_bundler_in_app
     end
   end
-
 end

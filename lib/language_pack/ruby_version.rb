@@ -61,12 +61,6 @@ module LanguagePack
       engine == :rbx
     end
 
-    # determines if a build ruby is required
-    # @return [Boolean] true if a build ruby is required
-    def build?
-      false
-    end
-
     # convert to a Gemfile ruby DSL incantation
     # @return [String] the string representation of the Gemfile ruby DSL
     def to_gemfile
