@@ -93,13 +93,6 @@ class LanguagePack::Base
     end
   end
 
-  def compile
-    instrument 'base.compile' do
-      supply
-      finalize
-    end
-  end
-
   def write_release_yaml
     release = {}
     release["config_vars"]           = default_config_vars
