@@ -42,21 +42,7 @@ module LanguagePack
 
     # https://github.com/bundler/bundler/issues/4621
     def version_for_download
-      if patchlevel_is_significant? && @patchlevel && @patchlevel.sub(/p/, '').to_i >= 0
-        @version
-      else
-        version_without_patchlevel
-      end
-    end
-
-    # Before Ruby 2.1 patch releases were done via patchlevel i.e. 1.9.3-p426 versus 1.9.3-p448
-    # With 2.1 and above patches are released in the "minor" version instead i.e. 2.1.0 versus 2.1.1
-    def patchlevel_is_significant?
-      false
-    end
-
-    def rake_is_vendored?
-      true
+      version_without_patchlevel
     end
 
     def default?

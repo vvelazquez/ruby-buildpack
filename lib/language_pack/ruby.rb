@@ -45,12 +45,6 @@ class LanguagePack::Ruby < LanguagePack::Base
     "Ruby"
   end
 
-  def default_addons
-    instrument "ruby.default_addons" do
-      add_dev_database_addon
-    end
-  end
-
   def default_config_vars
     instrument "ruby.default_config_vars" do
       vars = {
@@ -85,7 +79,7 @@ class LanguagePack::Ruby < LanguagePack::Base
       install_ruby
       install_jvm
       install_binaries
-      setup_supply_environment
+      add_dep_dir_to_path
       setup_export
       setup_profiled
     end
@@ -132,34 +126,12 @@ WARNING
     end
   end
 
-  # the base PATH environment variable to be used
-  # @return [String] the resulting PATH
-  def default_path
-    # need to remove bin/ folder since it links
-    # to the wrong --prefix ruby binstubs
-    # breaking require. This only applies to Ruby 1.9.2 and 1.8.7.
-    safe_binstubs = binstubs_relative_paths - ["bin"]
-    paths         = [
-      ENV["PATH"],
-      "bin",
-      system_paths,
-    ]
-    paths.unshift("#{slug_vendor_jvm}/bin") if ruby_version.jruby?
-    paths.unshift(safe_binstubs)
-
-    paths.join(":")
-  end
-
   def binstubs_relative_paths
     [
       "bin",
       bundler_binstubs_path,
       "#{slug_vendor_base}/bin"
     ]
-  end
-
-  def system_paths
-    "/usr/local/bin:/usr/bin:/bin"
   end
 
   # the relative path to the bundler directory of gems
@@ -184,12 +156,6 @@ WARNING
   # @return [String] resulting path
   def slug_vendor_jvm
     "#{@dep_dir}/jvm"
-  end
-
-  # the absolute path of the build ruby to use during the buildpack
-  # @return [String] resulting path
-  def build_ruby_path
-    "/tmp/#{ruby_version.version_without_patchlevel}"
   end
 
   # fetch the ruby version from bundler
@@ -280,7 +246,7 @@ EOF
   end
 
   # we need this so supply and finalize use the same ruby when they call slug_vendor_base
-  def setup_supply_environment
+  def add_dep_dir_to_path
     ENV['PATH'] = "#{@dep_dir}/bin:#{ENV['PATH']}"
   end
 
@@ -288,12 +254,15 @@ EOF
   # muiltibuildpack. We can't use profile.d because $HOME isn't set up
   def setup_export
     instrument 'ruby.setup_export' do
-      write_env_file "GEM_PATH", "#{build_path}/#{slug_vendor_base}:$GEM_PATH"
-      write_env_file  "LANG",     "en_US.UTF-8"
+      write_env_file "GEM_PATH", "#{build_path}/#{slug_vendor_base}:#{ENV['GEM_PATH']}"
+      write_env_file "GEM_HOME", "#{build_path}/#{slug_vendor_base}"
+      write_env_file "LANG",     "en_US.UTF-8"
+
+      config_vars = default_config_vars.each do |key, value|
+        write_env_file key value
+      end
 
       if ruby_version.jruby?
-        # add_to_export set_jvm_max_heap
-        # add_to_export set_java_mem
         write_env_file "JAVA_OPTS",  default_java_opts
         write_env_file "JRUBY_OPTS", default_jruby_opts
       end
@@ -389,12 +358,12 @@ ERROR
 
   ## TODO ; Should this exist? Should it force: true ?
   def link_supplied_binaries_in_app
- #   dest = Pathname.new("#{build_path}/bin")
- #   FileUtils.mkdir_p(dest.to_s)
- #   Dir["#{@dep_dir}/bin/*"].each do |bin|
- #     relative_bin = Pathname.new(bin).relative_path_from(dest).to_s
- #     FileUtils.ln_s(relative_bin, "#{dest}/#{File.basename(bin)}", force: true)
- #   end
+    dest = Pathname.new("#{build_path}/bin")
+    FileUtils.mkdir_p(dest.to_s)
+    Dir["#{@dep_dir}/bin/*"].each do |bin|
+      relative_bin = Pathname.new(bin).relative_path_from(dest).to_s
+      FileUtils.ln_s(relative_bin, "#{dest}/#{File.basename(bin)}", force: true)
+    end
   end
 
   def new_app?
@@ -408,19 +377,6 @@ ERROR
         @jvm_installer.install(ruby_version.engine_version, forced)
       end
     end
-  end
-
-  # find the ruby install path for its binstubs during build
-  # @return [String] resulting path or empty string if ruby is not vendored
-  def ruby_install_binstub_path
-    @ruby_install_binstub_path ||=
-      if ruby_version.build?
-        "#{build_ruby_path}/bin"
-      elsif ruby_version
-        "#{slug_vendor_ruby}/bin"
-      else
-        ""
-      end
   end
 
   # installs vendored gems into the slug
@@ -467,13 +423,6 @@ ERROR
       end
     end
   end
-
-  # removes a binary from the slug
-  # @param [String] relative path of the binary on the slug
-  def uninstall_binary(path)
-    FileUtils.rm File.join('bin', File.basename(path)), :force => true
-  end
-
 
   # remove `vendor/bundle` that comes from the git repo
   # in case there are native ext.
@@ -546,7 +495,6 @@ WARNING
           "BUNDLE_CONFIG"                 => "#{pwd}/.bundle/config",
           "NOKOGIRI_USE_SYSTEM_LIBRARIES" => "true"
         }
-        env_vars["BUNDLER_LIB_PATH"] = "#{bundler_path}" if ruby_version.ruby_version == "1.8.7"
         puts "Running: #{bundle_command}"
         instrument "ruby.bundle_install" do
           bundle_time = Benchmark.realtime do
@@ -656,11 +604,10 @@ params = CGI.parse(uri.query || "")
 
   def rake
     @rake ||= begin
-      rake_gem_available = bundler.has_gem?("rake") || ruby_version.rake_is_vendored?
       raise_on_fail      = bundler.gem_version('railties') && bundler.gem_version('railties') > Gem::Version.new('3.x')
 
       topic "Detecting rake tasks"
-      rake = LanguagePack::Helpers::RakeRunner.new(rake_gem_available)
+      rake = LanguagePack::Helpers::RakeRunner.new()
       rake.load_rake_tasks!({ env: rake_env }, raise_on_fail)
       rake
     end
@@ -684,12 +631,6 @@ params = CGI.parse(uri.query || "")
     git_dir = ENV.delete("GIT_DIR") # can mess with bundler
     blk.call
     ENV["GIT_DIR"] = git_dir
-  end
-
-  # decides if we need to enable the dev database addon
-  # @return [Array] empty - we don't add database gems
-  def add_dev_database_addon
-    []
   end
 
   # decides if we need to install the node.js binary
@@ -827,8 +768,4 @@ params = CGI.parse(uri.query || "")
     end
   end
 
-  def write_env_file(key, value)
-    FileUtils.mkdir_p("#{@dep_dir}/env")
-    File.write("#{@dep_dir}/env/#{key}", value)
-  end
 end

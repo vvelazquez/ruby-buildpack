@@ -58,11 +58,6 @@ class LanguagePack::Base
     raise "must subclass"
   end
 
-  # list of default addons to install
-  def default_addons
-    raise "must subclass"
-  end
-
   # config vars to be set on first push.
   # @return [Hash] the result
   # @not: this is only set the first time an app is pushed to.
@@ -107,7 +102,6 @@ class LanguagePack::Base
 
   def write_release_yaml
     release = {}
-    release["addons"]                = default_addons
     release["config_vars"]           = default_config_vars
     release["default_process_types"] = default_process_types
     FileUtils.mkdir("tmp") unless File.exists?("tmp")
@@ -151,8 +145,9 @@ class LanguagePack::Base
 
 private ##################################
 
-  # sets up the environment variables for the build process
-  def setup_language_pack_environment
+  def write_env_file(key, value)
+    FileUtils.mkdir_p("#{@dep_dir}/env")
+    File.write("#{@dep_dir}/env/#{key}", value)
   end
 
   def add_to_profiled(string)
