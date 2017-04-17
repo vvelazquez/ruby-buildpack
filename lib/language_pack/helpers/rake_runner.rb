@@ -8,13 +8,14 @@ class LanguagePack::Helpers::RakeRunner
     ALLOWED = [:pass, :fail, :no_load, :not_found]
     include LanguagePack::ShellHelpers
 
-    attr_accessor :output, :time, :status, :task_defined, :rakefile_can_load
+    attr_accessor :output, :time, :task, :status, :task_defined, :rakefile_can_load
 
     alias :rakefile_can_load? :rakefile_can_load
     alias :task_defined?      :task_defined
     alias :is_defined?        :task_defined
 
-    def initialize(options = {})
+    def initialize(task, options = {})
+      @task            = task
       @default_options = {user_env: true}.merge(options)
       @status          = :nil
       @output          = ""

@@ -259,7 +259,7 @@ EOF
       write_env_file "LANG",     "en_US.UTF-8"
 
       config_vars = default_config_vars.each do |key, value|
-        write_env_file key value
+        write_env_file key, value
       end
 
       if ruby_version.jruby?
