@@ -15,6 +15,7 @@ class LanguagePack::YarnInstaller
 
       Dir.chdir("bin") do
         FileUtils.ln_s("../#{binary_path}/bin/yarn", "yarn")
+        FileUtils.ln_s("../#{binary_path}/bin/yarnpkg", "yarnpkg")
       end
     end
   end

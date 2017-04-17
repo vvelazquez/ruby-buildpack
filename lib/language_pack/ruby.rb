@@ -389,12 +389,12 @@ ERROR
 
   ## TODO ; Should this exist? Should it force: true ?
   def link_supplied_binaries_in_app
-    dest = Pathname.new("#{build_path}/bin")
-    FileUtils.mkdir_p(dest.to_s)
-    Dir["#{@dep_dir}/bin/*"].each do |bin|
-      relative_bin = Pathname.new(bin).relative_path_from(dest).to_s
-      FileUtils.ln_s(relative_bin, "#{dest}/#{File.basename(bin)}", force: true)
-    end
+ #   dest = Pathname.new("#{build_path}/bin")
+ #   FileUtils.mkdir_p(dest.to_s)
+ #   Dir["#{@dep_dir}/bin/*"].each do |bin|
+ #     relative_bin = Pathname.new(bin).relative_path_from(dest).to_s
+ #     FileUtils.ln_s(relative_bin, "#{dest}/#{File.basename(bin)}", force: true)
+ #   end
   end
 
   def new_app?
@@ -474,22 +474,6 @@ ERROR
     FileUtils.rm File.join('bin', File.basename(path)), :force => true
   end
 
-  def load_default_cache?
-    return false # CloudFoundry cannot use the precompiled heroku gems.
-    new_app? && ruby_version.default?
-  end
-
-  # loads a default bundler cache for new apps to speed up initial bundle installs
-  def load_default_cache
-    instrument "ruby.load_default_cache" do
-      if false # load_default_cache?
-        puts "New app detected loading default bundler cache"
-        patchlevel = run("ruby -e 'puts RUBY_PATCHLEVEL'").chomp
-        cache_name  = "#{LanguagePack::RubyVersion::DEFAULT_VERSION}-p#{patchlevel}-default-cache"
-        @fetchers[:buildpack].fetch_untar("#{cache_name}.tgz")
-      end
-    end
-  end
 
   # remove `vendor/bundle` that comes from the git repo
   # in case there are native ext.
@@ -575,12 +559,7 @@ WARNING
           log "bundle", :status => "success"
           puts "Cleaning up the bundler cache."
           instrument "ruby.bundle_clean" do
-            # Only show bundle clean output when not using default cache
-            if load_default_cache?
-              run("#{bundle_bin} clean > /dev/null", user_env: true)
-            else
-              pipe("#{bundle_bin} clean", out: "2> /dev/null", user_env: true)
-            end
+            pipe("#{bundle_bin} clean", out: "2> /dev/null", user_env: true)
           end
           @bundler_cache.store
 
