@@ -300,7 +300,7 @@ EOF
   def setup_profiled
     instrument 'setup_profiled' do
       set_env_default  "LANG",     "en_US.UTF-8"
-      set_env_override "GEM_PATH", %Q{$HOME/#{slug_vendor_base}:$DEP_DIR/bundler-#{BUNDLER_VERSION}$([[ ! -z "${GEM_PATH:-}" ]] && echo ":$GEM_PATH")}
+      add_to_profiled %{export GEM_PATH="$HOME/#{slug_vendor_base}:$DEP_DIR/bundler-#{BUNDLER_VERSION}$([[ ! -z "${GEM_PATH:-}" ]] && echo ":$GEM_PATH")"}
       set_env_override "PATH",     binstubs_relative_paths.map {|path| "$HOME/#{path}" }.join(":") + ":$PATH"
 
       add_to_profiled set_default_web_concurrency if env("SENSIBLE_DEFAULTS")
