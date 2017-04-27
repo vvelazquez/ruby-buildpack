@@ -33,8 +33,10 @@ end
 stdout.split("\n").each do |line|
   var, val = line.split('=', 2)
   ENV[var] = val
+  puts "#{ENV[var]} = #{val}-------------------------------------------------"
 end
 
+puts "about to prepend"
 begin
   LanguagePack::Instrument.trace 'supply', 'app.supply' do
     if pack = LanguagePack.detect(ARGV[0], ARGV[1], dep_dir)
