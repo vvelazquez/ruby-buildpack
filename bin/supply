@@ -33,7 +33,7 @@ end
 stdout.split("\n").each do |line|
   var, val = line.split('=', 2)
   ENV[var] = val
-  puts "#{ENV[var]} = #{val}-------------------------------------------------"
+  puts "#{var} = #{val}-------------------------------------------------"
 end
 
 puts "about to prepend"
