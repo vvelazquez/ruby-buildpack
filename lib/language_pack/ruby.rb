@@ -312,7 +312,9 @@ EOF
         set_env_default "JAVA_OPTS", default_java_opts
         set_env_default "JRUBY_OPTS", default_jruby_opts
       end
-
+      add_to_profiled %{echo "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%"}
+      add_to_profiled %{echo "$LD_LIBRARY_PATH"}
+      add_to_profiled %{echo "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%"}
       add_to_profiled %{export LD_LIBRARY_PATH="$HOME/ld_library_path$([[ ! -z "${LD_LIBRARY_PATH:-}" ]] && echo ":$LD_LIBRARY_PATH")"}
     end
   end
