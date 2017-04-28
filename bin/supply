@@ -25,6 +25,9 @@ require 'cloud_foundry/language_pack/extensions'
 dep_dir = "#{deps_dir}/#{deps_idx}"
 LanguagePack::Helpers::BundlerWrapper.dep_dir = dep_dir
 
+puts "11111111111111111111111111111111111111111"
+puts "#{ENV['LD_LIBRARY_PATH']}"
+
 stdout, stderr, status = Open3.capture3("#{compile_extensions_dir}/bin/build_path_from_supply #{deps_dir}") 
 if status.exitstatus != 0
   puts "build_path_from_supply script failed: #{stdout} \n====\n #{stderr}"
@@ -34,7 +37,7 @@ puts"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 stdout.split("\n").each do |line|
   var, val = line.split('=', 2)
   ENV[var] = val
-  puts "#{ENV[var]} = #{val}"
+  puts "#{val} = #{val}"
 end
 
 puts "&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&"
