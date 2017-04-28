@@ -30,10 +30,15 @@ if status.exitstatus != 0
   puts "build_path_from_supply script failed: #{stdout} \n====\n #{stderr}"
   exit 1
 end
+puts"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 stdout.split("\n").each do |line|
   var, val = line.split('=', 2)
   ENV[var] = val
+  puts "#{ENV[var]} = #{val}"
 end
+
+puts "&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&"
+puts "#{ENV['LD_LIBRARY_PATH']}"
 
 begin
   LanguagePack::Instrument.trace 'supply', 'app.supply' do
