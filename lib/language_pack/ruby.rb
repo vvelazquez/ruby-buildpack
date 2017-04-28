@@ -70,6 +70,8 @@ class LanguagePack::Ruby < LanguagePack::Base
   def best_practice_warnings; end
 
   def supply
+    puts "***************************************************************************"
+    puts "#{ENV['LD_LIBRARY_PATH']}"
     instrument 'ruby.supply' do
       # check for new app at the beginning of supply
       new_app?
@@ -86,6 +88,8 @@ class LanguagePack::Ruby < LanguagePack::Base
   end
 
   def finalize
+    puts "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+    puts "#{ENV['LD_LIBRARY_PATH']}"
     instrument 'ruby.finalize' do
       # check for new app at the beginning of finalize
       new_app?
