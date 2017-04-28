@@ -313,7 +313,7 @@ EOF
         set_env_default "JRUBY_OPTS", default_jruby_opts
       end
 
-      add_to_profiled %{export LD_LIBRARY_PATH="$LD_LIBRARY_PATH$HOME/ld_library_path"}
+      add_to_profiled %{export LD_LIBRARY_PATH="$HOME/ld_library_path$([[ ! -z "${LD_LIBRARY_PATH:-}" ]] && echo ":$LD_LIBRARY_PATH")"}
     end
   end
 
