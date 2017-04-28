@@ -25,6 +25,9 @@ require 'cloud_foundry/language_pack/extensions'
 dep_dir = "#{deps_dir}/#{deps_idx}"
 LanguagePack::Helpers::BundlerWrapper.dep_dir = dep_dir
 
+puts "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+puts "#{ENV['LD_LIBRARY_PATH']}"
+
 stdout, stderr, status = Open3.capture3("#{compile_extensions_dir}/bin/build_path_from_supply #{deps_dir}") 
 if status.exitstatus != 0
   puts "build_path_from_supply script failed: #{stdout} \n====\n #{stderr}"
@@ -35,6 +38,9 @@ stdout.split("\n").each do |line|
   ENV[var] = val
 end
 
+puts "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+puts "#{ENV['LD_LIBRARY_PATH']}"
+
 begin
   LanguagePack::Instrument.trace 'supply', 'app.supply' do
     if pack = LanguagePack.detect(ARGV[0], ARGV[1], dep_dir)
@@ -44,6 +50,8 @@ begin
       end
     end
     system("#{compile_extensions_dir}/bin/write_config_yml #{buildpack_dir} #{dep_dir}") or raise 'Could not write config.yml'
+    puts "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+    puts "#{ENV['LD_LIBRARY_PATH']}"
   end
 rescue Exception => e
   Kernel.puts " !"
