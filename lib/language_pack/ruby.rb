@@ -530,6 +530,11 @@ WARNING
           "BUNDLE_CONFIG"                 => "#{pwd}/.bundle/config",
           "NOKOGIRI_USE_SYSTEM_LIBRARIES" => "true"
         }
+
+
+        puts "Running: #{bundle_bin} env"
+        pipe("#{bundle_bin} env", out: "2>&1", env: env_vars, user_env: true)
+
         puts "Running: #{bundle_command}"
         instrument "ruby.bundle_install" do
           bundle_time = Benchmark.realtime do
