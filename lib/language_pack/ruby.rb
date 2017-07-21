@@ -355,7 +355,7 @@ ERROR
       FileUtils.ln_s("ruby", "#{slug_vendor_ruby}/bin/ruby.exe")
       dest = Pathname.new("#{@dep_dir}/bin")
       FileUtils.mkdir_p(dest.to_s)
-      Dir["#{slug_vendor_ruby}/bin/*"].each do |bin|
+      Dir["#{build_path}/#{slug_vendor_ruby}/bin/*"].each do |bin|
         relative_bin = Pathname.new(bin).relative_path_from(dest).to_s
         FileUtils.ln_s(relative_bin, "#{dest}/#{File.basename(bin)}")
       end
