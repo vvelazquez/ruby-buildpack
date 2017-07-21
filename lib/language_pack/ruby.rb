@@ -397,6 +397,7 @@ ERROR
     FileUtils.mkdir_p(dest.to_s)
     Dir["#{build_path}}/#{bundler_binstubs_path}/*"].each do |bin|
       relative_bin = Pathname.new(bin).relative_path_from(dest).to_s
+      p [ Dir.pwd, relative_bin, "#{dest}/#{File.basename(bin)}" ]
       FileUtils.ln_s(relative_bin, "#{dest}/#{File.basename(bin)}", force: true)
     end
   end
