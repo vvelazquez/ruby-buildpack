@@ -402,7 +402,7 @@ ERROR
       p [ Dir.pwd, relative_bin, "#{dest}/#{File.basename(bin)}", dest_file ]
       # FileUtils.ln_s(relative_bin, "#{dest}/#{File.basename(bin)}", force: true)
       unless File.exists?("#{dest}/#{File.basename(bin)}")
-        File.write(dest_file, %Q{#!/bin/bash\n$DEPS_DIR#{ENV['DEPS_IDX']}/#{File.basename(bin)} "$@"\n})
+        File.write(dest_file, %Q{#!/bin/bash\n$DEPS_DIR/#{ENV['DEPS_IDX']}/bin/#{File.basename(bin)} "$@"\n})
         FileUtils.chmod '+x', dest_file
       end
     end
