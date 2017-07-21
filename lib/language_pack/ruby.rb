@@ -352,6 +352,10 @@ ERROR
         end
       end
 
+      puts `echo PWD: $PWD`
+      puts "PWD: #{Dir.cwd}"
+      puts "BIN: #{build_path}/#{slug_vendor_ruby}/bin/*"
+
       FileUtils.ln_s("ruby", "#{slug_vendor_ruby}/bin/ruby.exe")
       dest = Pathname.new("#{@dep_dir}/bin")
       FileUtils.mkdir_p(dest.to_s)
