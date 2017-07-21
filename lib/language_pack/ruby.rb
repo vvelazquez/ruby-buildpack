@@ -395,7 +395,7 @@ ERROR
   def link_supplied_binaries_in_app
     dest = Pathname.new("#{build_path}/bin")
     FileUtils.mkdir_p(dest.to_s)
-    Dir["#{@dep_dir}/bin/*"].each do |bin|
+    Dir["#{build_path}}/#{bundler_binstubs_path}/*"].each do |bin|
       relative_bin = Pathname.new(bin).relative_path_from(dest).to_s
       FileUtils.ln_s(relative_bin, "#{dest}/#{File.basename(bin)}", force: true)
     end
