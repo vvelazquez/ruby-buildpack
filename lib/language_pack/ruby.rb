@@ -352,14 +352,12 @@ ERROR
         end
       end
 
-      puts "PWD: #{Dir.pwd}"
-      puts "BIN: #{build_path}/#{slug_vendor_ruby}/bin/*"
-
       FileUtils.ln_s("ruby", "#{slug_vendor_ruby}/bin/ruby.exe")
       dest = Pathname.new("#{@dep_dir}/bin")
       FileUtils.mkdir_p(dest.to_s)
-      Dir["#{build_path}/#{slug_vendor_ruby}/bin/*"].each do |bin|
+      Dir["#{slug_vendor_ruby}/bin/*"].each do |bin|
         relative_bin = Pathname.new(bin).relative_path_from(dest).to_s
+        p [ Dir.pwd, relative_bin, "#{dest}/#{File.basename(bin)}" ]
         FileUtils.ln_s(relative_bin, "#{dest}/#{File.basename(bin)}")
       end
 
