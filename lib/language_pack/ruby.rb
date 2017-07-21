@@ -352,7 +352,7 @@ ERROR
         end
       end
 
-      puts "PWD: #{Dir.cwd}"
+      puts "PWD: #{Dir.pwd}"
       puts "BIN: #{build_path}/#{slug_vendor_ruby}/bin/*"
 
       FileUtils.ln_s("ruby", "#{slug_vendor_ruby}/bin/ruby.exe")
