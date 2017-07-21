@@ -357,7 +357,6 @@ ERROR
       FileUtils.mkdir_p(dest.to_s)
       Dir["#{slug_vendor_ruby}/bin/*"].each do |bin|
         relative_bin = Pathname.new(bin).relative_path_from(dest).to_s
-        p [ Dir.pwd, relative_bin, "#{dest}/#{File.basename(bin)}" ]
         FileUtils.ln_s(relative_bin, "#{dest}/#{File.basename(bin)}")
       end
 
@@ -395,14 +394,10 @@ ERROR
   def link_supplied_binaries_in_app
     dep_idx = File.basename(@dep_dir)
     dest = Pathname.new("#{build_path}/bin")
-    puts "link_supplied_binaries_in_app: #{dest}"
     FileUtils.mkdir_p(dest.to_s)
     Dir["#{@dep_dir}/bin/*"].each do |bin|
-      relative_bin = Pathname.new(bin).relative_path_from(dest).to_s
       dest_file = "#{dest}/#{File.basename(bin)}"
-      p [ Dir.pwd, relative_bin, "#{dest}/#{File.basename(bin)}", dest_file ]
-      # FileUtils.ln_s(relative_bin, "#{dest}/#{File.basename(bin)}", force: true)
-      unless File.exists?("#{dest}/#{File.basename(bin)}")
+      unless File.exists?(dest_file)
         File.write(dest_file, %Q{#!/bin/bash\n$DEPS_DIR/#{dep_idx}/bin/#{File.basename(bin)} "$@"\n})
         FileUtils.chmod '+x', dest_file
       end
