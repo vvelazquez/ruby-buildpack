@@ -352,7 +352,6 @@ ERROR
         end
       end
 
-      puts `echo PWD: $PWD`
       puts "PWD: #{Dir.cwd}"
       puts "BIN: #{build_path}/#{slug_vendor_ruby}/bin/*"
 
