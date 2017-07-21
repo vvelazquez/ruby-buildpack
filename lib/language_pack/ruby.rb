@@ -398,8 +398,13 @@ ERROR
     FileUtils.mkdir_p(dest.to_s)
     Dir["#{build_path}}/#{bundler_binstubs_path}/*"].each do |bin|
       relative_bin = Pathname.new(bin).relative_path_from(dest).to_s
-      p [ Dir.pwd, relative_bin, "#{dest}/#{File.basename(bin)}" ]
-      FileUtils.ln_s(relative_bin, "#{dest}/#{File.basename(bin)}", force: true)
+      dest_file = "#{dest}/#{File.basename(bin)}"
+      p [ Dir.pwd, relative_bin, "#{dest}/#{File.basename(bin)}", dest_file ]
+      # FileUtils.ln_s(relative_bin, "#{dest}/#{File.basename(bin)}", force: true)
+      unless File.exists?("#{dest}/#{File.basename(bin)}")
+        File.write(dest_file, %Q{#!/bin/bash\n$DEPS_DIR#{ENV['DEPS_IDX']}/#{File.basename(bin)} "$@"\n})
+        FileUtils.chmod '+x', dest_file
+      end
     end
   end
 
