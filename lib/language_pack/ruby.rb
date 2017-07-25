@@ -83,6 +83,14 @@ class LanguagePack::Ruby < LanguagePack::Base
       add_dep_dir_to_path
       setup_export
       setup_profiled
+
+      remove_vendor_bundle
+      link_supplied_binaries_in_app
+      allow_git do
+        install_bundler_in_app
+        build_bundler
+        post_bundler
+      end
     end
   end
 
@@ -91,12 +99,7 @@ class LanguagePack::Ruby < LanguagePack::Base
       # check for new app at the beginning of finalize
       new_app?
       Dir.chdir(build_path)
-      remove_vendor_bundle
-      link_supplied_binaries_in_app
       allow_git do
-        install_bundler_in_app
-        build_bundler
-        post_bundler
         create_database_yml
         run_assets_precompile_rake_task
       end
