@@ -44,11 +44,13 @@ class LanguagePack::Helpers::RakeRunner
       time = Benchmark.realtime do
         cmd = "rake #{task}"
 
+        puts "Before run rake #{task}"
         if quiet_option
           self.output = run("rake #{task}", options)
         else
           self.output = pipe("rake #{task}", options)
         end
+        puts "After run rake #{task}"
       end
       self.time = time
 

@@ -92,14 +92,25 @@ class LanguagePack::Ruby < LanguagePack::Base
         post_bundler
       end
     end
+
+    p ENV
+    puts "bundler.bundler_path: #{bundler.bundler_path}"
+    puts "slug_vendor_base: #{slug_vendor_base}"
   end
 
   def finalize
+    p ENV
+    puts "bundler.bundler_path: #{bundler.bundler_path}"
+    puts "slug_vendor_base: #{slug_vendor_base}"
+
     instrument 'ruby.finalize' do
       # check for new app at the beginning of finalize
       new_app?
       Dir.chdir(build_path)
       allow_git do
+        puts "bundler.bundler_path: #{bundler.bundler_path}"
+        puts "slug_vendor_base: #{slug_vendor_base}"
+
         create_database_yml
         run_assets_precompile_rake_task
       end
@@ -422,6 +433,9 @@ ERROR
 
   # installs vendored gems into the slug
   def install_bundler_in_app
+    puts "bundler.bundler_path: #{bundler.bundler_path}"
+    puts "slug_vendor_base: #{slug_vendor_base}"
+
     instrument 'ruby.install_language_pack_gems' do
       FileUtils.mkdir_p(slug_vendor_base)
       Dir.chdir(slug_vendor_base) do |dir|
@@ -489,6 +503,9 @@ WARNING
     instrument 'ruby.build_bundler' do
       log("bundle") do
         bundle_without = env("BUNDLE_WITHOUT") || "development:test"
+
+        puts "==== BUNDLE: #{`which bundle`} =====\n"
+
         bundle_bin     = "bundle"
         bundle_command = "#{bundle_bin} install --without #{bundle_without} --path vendor/bundle --binstubs #{bundler_binstubs_path}"
         bundle_command << " --jobs=4"
@@ -649,6 +666,7 @@ params = CGI.parse(uri.query || "")
 
       topic "Detecting rake tasks"
       rake = LanguagePack::Helpers::RakeRunner.new()
+      p rake_env
       rake.load_rake_tasks!({ env: rake_env }, raise_on_fail)
       rake
     end
