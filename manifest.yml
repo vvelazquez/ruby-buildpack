@@ -3,6 +3,7 @@ language: ruby
 default_versions:
 - name: ruby
   version: 2.4.1
+pre_package: scripts/build.sh
 url_to_dependency_map:
 - match: ruby-(.*?)-jruby-(.*?)\.tgz
   name: jruby

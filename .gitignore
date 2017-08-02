@@ -19,3 +19,4 @@ vendor/bundler/*
 .bundle/
 *.so.*
 /.bin/
+/pkg/
