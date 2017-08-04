@@ -48,7 +48,7 @@ var _ = Describe("Ruby", func() {
 				manifest.EXPECT().AllDependencyVersions("ruby").Return([]string{"1.2.3", "3.1.2"})
 				v := versions.New(tmpDir, manifest)
 				_, err := v.Version()
-				Expect(err).To(MatchError("Determining ruby version: No Matching ruby versions"))
+				Expect(err).To(MatchError("Running ruby: No Matching ruby versions"))
 			})
 		})
 

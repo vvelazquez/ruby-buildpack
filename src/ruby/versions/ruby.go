@@ -28,39 +28,60 @@ func New(buildDir string, manifest Manifest) *Versions {
 	}
 }
 
-func (v *Versions) Version() (string, error) {
-	gemfile := filepath.Join(v.buildDir, "Gemfile")
+type output struct {
+	Error  string      `json:"error"`
+	Output interface{} `json:"output"`
+}
 
-	satisfied := fmt.Sprintf(`
-		require 'json'
+func (v *Versions) Version() (string, error) {
+	versions := v.manifest.AllDependencyVersions("ruby")
+	gemfile := filepath.Join(v.buildDir, "Gemfile")
+	code := fmt.Sprintf(`
 		require 'bundler'
-		begin
 		b = Bundler::Dsl.evaluate('%s', '%s.lock', {}).ruby_version
-		if !b
-			puts({error:nil, version:''}.to_json)
-			exit 0
-		end
-		potentials = JSON.parse(STDIN.read)
+	  return '' if !b
+
 		r = Gem::Requirement.create(b.versions)
-		version = potentials.select { |v| r.satisfied_by? Gem::Version.new(v) }.sort.last
-		if version
-			puts({error:nil, version:version}.to_json)
-		else
-			puts({error:'No Matching ruby versions', version:nil}.to_json)
-		end
-		rescue => e
-			puts({error:e.to_s, version:nil}.to_json)
-		end
+		version = input.select { |v| r.satisfied_by? Gem::Version.new(v) }.sort.last
+		return version if version
+		raise 'No Matching ruby versions'
 	`, filepath.Base(gemfile), filepath.Base(gemfile))
 
-	versions := v.manifest.AllDependencyVersions("ruby")
-	data, err := json.Marshal(versions)
+	data, err := v.run(filepath.Dir(gemfile), code, versions)
 	if err != nil {
 		return "", err
 	}
 
-	cmd := exec.Command("ruby", "-e", satisfied)
-	cmd.Dir = filepath.Dir(gemfile)
+	version := data.(string)
+	if version == "" {
+		// TODO warning about no version set by dev https://github.com/cloudfoundry/ruby-buildpack/blob/master/lib/language_pack/ruby.rb#L367-L372
+		dep, err := v.manifest.DefaultVersion("ruby")
+		return dep.Version, err
+	}
+	return version, nil
+}
+
+func (v *Versions) run(dir, code string, in interface{}) (interface{}, error) {
+	data, err := json.Marshal(in)
+	if err != nil {
+		return "", err
+	}
+
+	code = fmt.Sprintf(`
+		begin
+			def data(input)
+				%s
+			end
+			input = JSON.parse(STDIN.read)
+			out = data(input)
+			puts({error:nil, data:out}.to_json)
+		rescue => e
+			puts({error:e.to_s, data:nil}.to_json)
+		end
+	`, code)
+
+	cmd := exec.Command("ruby", "-rjson", "-e", code)
+	cmd.Dir = dir
 	cmd.Stdin = strings.NewReader(string(data))
 	cmd.Stderr = os.Stderr
 	body, err := cmd.Output()
@@ -68,19 +89,14 @@ func (v *Versions) Version() (string, error) {
 		return "", err
 	}
 	output := struct {
-		Error   string `json:"error"`
-		Version string `json:"version"`
+		Error string      `json:"error"`
+		Data  interface{} `json:"data"`
 	}{}
 	if err := json.Unmarshal(body, &output); err != nil {
 		return "", err
 	}
 	if output.Error != "" {
-		return "", fmt.Errorf("Determining ruby version: %s", output.Error)
+		return "", fmt.Errorf("Running ruby: %s", output.Error)
 	}
-	if output.Version == "" {
-		// TODO warning about no version set by dev https://github.com/cloudfoundry/ruby-buildpack/blob/master/lib/language_pack/ruby.rb#L367-L372
-		dep, err := v.manifest.DefaultVersion("ruby")
-		return dep.Version, err
-	}
-	return output.Version, nil
+	return output.Data, nil
 }
