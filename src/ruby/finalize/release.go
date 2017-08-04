@@ -6,7 +6,7 @@ import (
 
 type Versions interface {
 	HasGem(string) (bool, error)
-	GemVersion(string) (*semver.Version, error)
+	HasGemVersion(string) (*semver.Version, error)
 }
 
 func (f *Finalizer) GenerateReleaseYaml() (map[string]map[string]string, error) {
@@ -18,14 +18,27 @@ func (f *Finalizer) GenerateReleaseYaml() (map[string]map[string]string, error) 
 	if err != nil {
 		return nil, err
 	}
-	railsMM, err := f.Versions.GemVersion("rails")
+	hasRails, err := f.Versions.HasGem("rails")
 	if err != nil {
 		return nil, err
 	}
-	if railsMM != nil {
-		rails := semver.MustParse(railsMM.String())
+	if hasRails {
+		rails := semver.MustParse(hasRails.String())
 		processTypes["worker"] = "bundle exec rake jobs:work"
-		if rails.GTE(mustParse("4.0.0-beta")) {
+		hasRails4, err := f.Versions.HasGemVersion("rails", ">= 4.0.0-beta")
+		if err != nil {
+			return nil, err
+		}
+		hasRails3, err := f.Versions.HasGemVersion("rails", ">=3.0.0")
+		if err != nil {
+			return nil, err
+		}
+		hasRails2, err := f.Versions.HasGemVersion("rails", ">=2.0.0")
+		if err != nil {
+			return nil, err
+		}
+		// vvvvv convert below to use bools here ^^^^
+		if hasRails4 {
 			processTypes["console"] = "bin/rails console"
 			processTypes["web"] = "bin/rails server -b 0.0.0.0 -p $PORT -e $RAILS_ENV"
 		} else if rails.GTE(semver.MustParse("3.0.0")) {

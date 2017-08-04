@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/blang/semver"
 	"github.com/cloudfoundry/libbuildpack"
 )
 
@@ -62,15 +61,23 @@ func (v *Versions) Version() (string, error) {
 	return version, nil
 }
 
-func (v *Versions) GemVersion(gem string) (*semver.Version, error) {
+func (v *Versions) HasGemVersion(gem, constraint string) (bool, error) {
 	specs, err := v.specs()
 	if err != nil {
-		return nil, err
+		return false, err
 	}
 	if specs[gem] == "" {
+		return false, nil
 	}
 
-	return semver.NewVersion(specs[gem])
+	code := `Gem::Requirement.create(input[1]).satisfied_by? Gem::Version.new(input[0])`
+
+	data, err := v.run(v.buildDir, code, []string{specs[gem], constraint})
+	if err != nil {
+		return false, err
+	}
+
+	return data.(bool), nil
 }
 
 func (v *Versions) HasGem(gem string) (bool, error) {

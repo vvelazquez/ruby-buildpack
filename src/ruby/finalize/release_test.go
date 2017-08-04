@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 	"ruby/finalize"
 
-	"github.com/blang/semver"
 	"github.com/cloudfoundry/libbuildpack"
 	"github.com/cloudfoundry/libbuildpack/ansicleaner"
 	"github.com/golang/mock/gomock"
@@ -75,8 +74,8 @@ var _ = Describe("Finalize", func() {
 		Context("Rails 4+", func() {
 			BeforeEach(func() {
 				mockVersions.EXPECT().HasGem("thin").Return(true, nil)
-				version4 := semver.MustParse("4.0.5")
-				mockVersions.EXPECT().GemVersion("rails").Return(&version4, nil)
+				mockVersions.EXPECT().HasGem("rails").Return(true, nil)
+				mockVersions.EXPECT().HasGemVersion("rails", ">=4.0.0.beta").Return(true, nil)
 			})
 			It("generates web, worker, rake and console process types", func() {
 				data, err := finalizer.GenerateReleaseYaml()
@@ -93,8 +92,8 @@ var _ = Describe("Finalize", func() {
 		})
 		Context("Rails 3.x", func() {
 			BeforeEach(func() {
-				version3 := semver.MustParse("3.5.0")
-				mockVersions.EXPECT().GemVersion("rails").Return(&version3, nil)
+				mockVersions.EXPECT().HasGem("rails").Return(true, nil)
+				mockVersions.EXPECT().HasGemVersion("rails", ">=3.0.0").Return(true, nil)
 			})
 			Context("thin is not present", func() {
 				BeforeEach(func() {
@@ -133,8 +132,8 @@ var _ = Describe("Finalize", func() {
 		})
 		Context("Rails 2.x", func() {
 			BeforeEach(func() {
-				version2 := semver.MustParse("2.5.0")
-				mockVersions.EXPECT().GemVersion("rails").Return(&version2, nil)
+				mockVersions.EXPECT().HasGem("rails").Return(true, nil)
+				mockVersions.EXPECT().HasGemVersion("rails", ">=2.0.0").Return(true, nil)
 			})
 			Context("thin is not present", func() {
 				BeforeEach(func() {
@@ -173,7 +172,7 @@ var _ = Describe("Finalize", func() {
 		})
 		Context("Rack", func() {
 			BeforeEach(func() {
-				mockVersions.EXPECT().GemVersion("rails").Return(nil, nil)
+				mockVersions.EXPECT().HasGemVersion("rails", gomock.Any()).Return(false, nil)
 				mockVersions.EXPECT().HasGem("rack").Return(true, nil)
 			})
 			Context("thin is not present", func() {
@@ -212,7 +211,7 @@ var _ = Describe("Finalize", func() {
 		Context("Ruby", func() {
 			BeforeEach(func() {
 				mockVersions.EXPECT().HasGem("thin").Return(false, nil)
-				mockVersions.EXPECT().GemVersion("rails").Return(nil, nil)
+				mockVersions.EXPECT().HasGemVersion("rails", gomock.Any()).Return(false, nil)
 				mockVersions.EXPECT().HasGem("rack").Return(false, nil)
 			})
 			It("generates rake and console process types", func() {

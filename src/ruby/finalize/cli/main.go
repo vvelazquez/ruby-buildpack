@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 	"ruby/finalize"
+	"ruby/versions"
 	// _ "ruby/hooks"
 	"time"
 
@@ -44,8 +45,8 @@ func main() {
 	f := finalize.Finalizer{
 		Stager: stager,
 		// Manifest: manifest,
-		Log: logger,
-		// Logfile:  logfile,
+		Log:      logger,
+		Versions: versions.New(stager.BuildDir(), manifest),
 	}
 
 	if err := finalize.Run(&f); err != nil {

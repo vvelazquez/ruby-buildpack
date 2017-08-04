@@ -101,7 +101,7 @@ BUNDLED WITH
 		})
 	})
 
-	Describe("GemVersion", func() {
+	Describe("HasGemVersion", func() {
 		BeforeEach(func() {
 			Expect(ioutil.WriteFile(filepath.Join(tmpDir, "Gemfile"), []byte(`gem 'roda'`), 0644)).To(Succeed())
 			Expect(ioutil.WriteFile(filepath.Join(tmpDir, "Gemfile.lock"), []byte(`GEM
@@ -121,17 +121,25 @@ BUNDLED WITH
 			`), 0644)).To(Succeed())
 		})
 
-		It("returns 2.28.0 for roda", func() {
+		It("returns true for >=2.28.0 for roda", func() {
 			v := versions.New(tmpDir, manifest)
-			version, err := v.GemVersion("roda")
+			match, err := v.HasGemVersion("roda", ">=2.28.0")
 			Expect(err).ToNot(HaveOccurred())
-			Expect(version.String()).To(Equal("2.28.0"))
+			Expect(match).To(BeTrue())
+		})
+
+		It("returns false for <2.28.0 for roda", func() {
+			v := versions.New(tmpDir, manifest)
+			match, err := v.HasGemVersion("roda", "<2.28.0")
+			Expect(err).ToNot(HaveOccurred())
+			Expect(match).To(BeFalse())
 		})
 
 		It("returns false for rails", func() {
 			v := versions.New(tmpDir, manifest)
-			_, err := v.GemVersion("rails")
-			Expect(err).To(MatchError("Invalid Semantic Version"))
+			match, err := v.HasGemVersion("rails", "1.0.0")
+			Expect(err).ToNot(HaveOccurred())
+			Expect(match).To(BeFalse())
 		})
 	})
 })
