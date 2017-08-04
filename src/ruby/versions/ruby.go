@@ -44,8 +44,8 @@ func (v *Versions) Version() (string, error) {
 
 		r = Gem::Requirement.create(b.versions)
 		version = input.select { |v| r.satisfied_by? Gem::Version.new(v) }.sort.last
-		return version if version
-		raise 'No Matching ruby versions'
+		raise 'No Matching ruby versions' unless version
+		version
 	`, filepath.Base(gemfile), filepath.Base(gemfile))
 
 	data, err := v.run(filepath.Dir(gemfile), code, versions)
@@ -90,8 +90,7 @@ func (v *Versions) specs() (map[string]string, error) {
 	}
 	code := `
 		parsed = Bundler::LockfileParser.new(File.read(input["gemfilelock"]))
-		specs = Hash[*(parsed.specs.map{|spec| [spec.name, spec.version.to_s]}).flatten]
-		specs
+		Hash[*(parsed.specs.map{|spec| [spec.name, spec.version.to_s]}).flatten]
 	`
 
 	data, err := v.run(filepath.Dir(v.gemfile()), code, map[string]string{"gemfilelock": fmt.Sprintf("%s.lock", v.gemfile())})
