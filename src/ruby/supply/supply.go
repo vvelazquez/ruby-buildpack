@@ -117,7 +117,15 @@ func (s *Supplier) InstallBundler() error {
 		return err
 	}
 
-	if err := s.Stager.WriteProfileD("bundler.sh", fmt.Sprintf("export GEM_HOME=${GEM_HOME:-$DEPS_DIR/%s/gem_home}\nexport GEM_PATH=${GEM_PATH:-$DEPS_DIR/%s/gem_home:$DEPS_DIR/%s/bundler}\n", s.Stager.DepsIdx(), s.Stager.DepsIdx(), s.Stager.DepsIdx())); err != nil {
+	if err := s.Stager.WriteProfileD("bundler.sh", fmt.Sprintf(`
+		export GEM_HOME=${GEM_HOME:-$DEPS_DIR/%s/gem_home}
+
+		## TODO 2.4.0 should be dynamic
+		export GEM_PATH=${GEM_PATH:-GEM_PATH=$DEPS_DIR/%s/vendor_bundle/ruby/2.4.0:$DEPS_DIR/%s/gem_home:$DEPS_DIR/%s/bundler}
+
+		## TODO Is this the right plan?
+		bundle config PATH "$DEPS_DIR/%s/vendor_bundle"
+		`, s.Stager.DepsIdx(), s.Stager.DepsIdx(), s.Stager.DepsIdx(), s.Stager.DepsIdx(), s.Stager.DepsIdx())); err != nil {
 		return err
 	}
 
