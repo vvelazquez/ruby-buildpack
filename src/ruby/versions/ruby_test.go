@@ -17,22 +17,20 @@ var _ = Describe("Ruby", func() {
 	var (
 		mockCtrl *gomock.Controller
 		manifest *MockManifest
+		tmpDir   string
 	)
 	BeforeEach(func() {
 		mockCtrl = gomock.NewController(GinkgoT())
 		manifest = NewMockManifest(mockCtrl)
+
+		var err error
+		tmpDir, err = ioutil.TempDir("", "versions.ruby")
+		Expect(err).ToNot(HaveOccurred())
 	})
 	AfterEach(func() {
 		mockCtrl.Finish()
 	})
 	Describe("Version", func() {
-		var tmpDir string
-
-		BeforeEach(func() {
-			var err error
-			tmpDir, err = ioutil.TempDir("", "ruby#version")
-			Expect(err).ToNot(HaveOccurred())
-		})
 		Context("Gemfile has a constraint", func() {
 			BeforeEach(func() {
 				Expect(ioutil.WriteFile(filepath.Join(tmpDir, "Gemfile"), []byte(`ruby "~>2.2.0"`), 0644)).To(Succeed())
@@ -70,5 +68,70 @@ var _ = Describe("Ruby", func() {
 		PIt("BUNDLE_GEMFILE env var is set", func() {})
 		PIt("Gemfile specifies jruby", func() {})
 		PIt("Gemfile specifies rubinius", func() {})
+	})
+
+	Describe("HasGem", func() {
+		BeforeEach(func() {
+			Expect(ioutil.WriteFile(filepath.Join(tmpDir, "Gemfile"), []byte(`gem 'roda'`), 0644)).To(Succeed())
+			Expect(ioutil.WriteFile(filepath.Join(tmpDir, "Gemfile.lock"), []byte(`GEM
+  specs:
+    rack (2.0.3)
+    roda (2.28.0)
+      rack
+
+PLATFORMS
+  ruby
+
+DEPENDENCIES
+  roda
+
+BUNDLED WITH
+   1.15.3
+			`), 0644)).To(Succeed())
+		})
+
+		It("returns true for roda", func() {
+			v := versions.New(tmpDir, manifest)
+			Expect(v.HasGem("roda")).To(BeTrue())
+		})
+
+		It("returns false for rails", func() {
+			v := versions.New(tmpDir, manifest)
+			Expect(v.HasGem("rails")).To(BeFalse())
+		})
+	})
+
+	Describe("GemVersion", func() {
+		BeforeEach(func() {
+			Expect(ioutil.WriteFile(filepath.Join(tmpDir, "Gemfile"), []byte(`gem 'roda'`), 0644)).To(Succeed())
+			Expect(ioutil.WriteFile(filepath.Join(tmpDir, "Gemfile.lock"), []byte(`GEM
+  specs:
+    rack (2.0.3)
+    roda (2.28.0)
+      rack
+
+PLATFORMS
+  ruby
+
+DEPENDENCIES
+  roda
+
+BUNDLED WITH
+   1.15.3
+			`), 0644)).To(Succeed())
+		})
+
+		It("returns 2.28.0 for roda", func() {
+			v := versions.New(tmpDir, manifest)
+			version, err := v.GemVersion("roda")
+			Expect(err).ToNot(HaveOccurred())
+			Expect(version.String()).To(Equal("2.28.0"))
+		})
+
+		It("returns false for rails", func() {
+			v := versions.New(tmpDir, manifest)
+			_, err := v.GemVersion("rails")
+			Expect(err).To(MatchError("Invalid Semantic Version"))
+		})
 	})
 })

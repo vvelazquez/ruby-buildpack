@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/Masterminds/semver"
 	"github.com/cloudfoundry/libbuildpack"
 )
 
@@ -17,8 +18,9 @@ type Manifest interface {
 }
 
 type Versions struct {
-	buildDir string
-	manifest Manifest
+	buildDir    string
+	manifest    Manifest
+	cachedSpecs map[string]string
 }
 
 func New(buildDir string, manifest Manifest) *Versions {
@@ -35,9 +37,8 @@ type output struct {
 
 func (v *Versions) Version() (string, error) {
 	versions := v.manifest.AllDependencyVersions("ruby")
-	gemfile := filepath.Join(v.buildDir, "Gemfile")
+	gemfile := v.gemfile()
 	code := fmt.Sprintf(`
-		require 'bundler'
 		b = Bundler::Dsl.evaluate('%s', '%s.lock', {}).ruby_version
 	  return '' if !b
 
@@ -61,6 +62,54 @@ func (v *Versions) Version() (string, error) {
 	return version, nil
 }
 
+func (v *Versions) GemVersion(gem string) (*semver.Version, error) {
+	specs, err := v.specs()
+	if err != nil {
+		return nil, err
+	}
+	if specs[gem] == "" {
+	}
+
+	return semver.NewVersion(specs[gem])
+}
+
+func (v *Versions) HasGem(gem string) (bool, error) {
+	specs, err := v.specs()
+	if err != nil {
+		return false, err
+	}
+	if specs[gem] != "" {
+		return true, nil
+	}
+	return false, nil
+}
+
+func (v *Versions) specs() (map[string]string, error) {
+	if len(v.cachedSpecs) > 0 {
+		return v.cachedSpecs, nil
+	}
+	code := `
+		parsed = Bundler::LockfileParser.new(File.read(input["gemfilelock"]))
+		specs = Hash[*(parsed.specs.map{|spec| [spec.name, spec.version.to_s]}).flatten]
+		specs
+	`
+
+	data, err := v.run(filepath.Dir(v.gemfile()), code, map[string]string{"gemfilelock": fmt.Sprintf("%s.lock", v.gemfile())})
+	if err != nil {
+		return nil, err
+	}
+	specs := make(map[string]string, 0)
+	for k, v := range data.(map[string]interface{}) {
+		specs[k] = v.(string)
+	}
+	v.cachedSpecs = specs
+	return v.cachedSpecs, nil
+}
+
+func (v *Versions) gemfile() string {
+	return filepath.Join(v.buildDir, "Gemfile")
+}
+
 func (v *Versions) run(dir, code string, in interface{}) (interface{}, error) {
 	data, err := json.Marshal(in)
 	if err != nil {
@@ -80,12 +129,13 @@ func (v *Versions) run(dir, code string, in interface{}) (interface{}, error) {
 		end
 	`, code)
 
-	cmd := exec.Command("ruby", "-rjson", "-e", code)
+	cmd := exec.Command("ruby", "-rjson", "-rbundler", "-e", code)
 	cmd.Dir = dir
 	cmd.Stdin = strings.NewReader(string(data))
 	cmd.Stderr = os.Stderr
 	body, err := cmd.Output()
 	if err != nil {
+		fmt.Println(body)
 		return "", err
 	}
 	output := struct {
