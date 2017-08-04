@@ -261,8 +261,13 @@ func (s *Supplier) CreateDefaultEnv() error {
 	}
 
 	scriptContents := `
-export RAILS_ENV=${RAILS_ENV:-production}
-export RACK_ENV=${RACK_ENV:-production}
+export LANG=$(LANG:-en_US.UTF-8}
+export RAILS_ENV=$(RAILS_ENV:-production}
+export RACK_ENV=$(RACK_ENV:-production}
+## TODO do below properly
+## export SECRET_KEY_BASE=$(SECRET_KEY_BASE:-1234}
+export RAILS_SERVE_STATIC_FILES=$(RAILS_SERVE_STATIC_FILES:-enabled}
+export RAILS_LOG_TO_STDOUT=$(RAILS_LOG_TO_STDOUT:-enabled}
 `
 
 	return s.Stager.WriteProfileD("ruby.sh", scriptContents)

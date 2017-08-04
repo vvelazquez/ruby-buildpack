@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/Masterminds/semver"
+	"github.com/blang/semver"
 	"github.com/cloudfoundry/libbuildpack"
 )
 

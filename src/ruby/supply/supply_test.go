@@ -1087,4 +1087,6 @@ var _ = Describe("Supply", func() {
 			Expect(string(contents)).To(ContainSubstring("export NODE_ENV=${NODE_ENV:-production}"))
 		})
 	})
+
+	PIt("blows up if there is no lock file", func() {})
 })
