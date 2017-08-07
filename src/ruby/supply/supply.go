@@ -7,21 +7,25 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"ruby/versions"
 	"strings"
 
 	"github.com/cloudfoundry/libbuildpack"
 	"github.com/kr/text"
 )
 
-// type Command interface {
-// 	Execute(string, io.Writer, io.Writer, string, ...string) error
-// }
+type Command interface {
+	// Execute(string, io.Writer, io.Writer, string, ...string) error
+	Output(string, string, ...string) (string, error)
+}
 
 type Manifest interface {
 	AllDependencyVersions(string) []string
 	InstallDependency(libbuildpack.Dependency, string) error
 	InstallOnlyVersion(string, string) error
+}
+type Versions interface {
+	Version() (string, error)
+	HasGemVersion(gem, constraint string) (bool, error)
 }
 
 type Stager interface {
@@ -38,8 +42,8 @@ type Supplier struct {
 	Stager   Stager
 	Manifest Manifest
 	Log      *libbuildpack.Logger
-	Versions *versions.Versions
-	// Command            Command
+	Versions Versions
+	Command  Command
 }
 
 func Run(s *Supplier) error {
@@ -81,9 +85,14 @@ func Run(s *Supplier) error {
 		return err
 	}
 
+	if err := s.WriteProfileD(); err != nil {
+		s.Log.Error("Unable to write profile.d: %s", err.Error())
+		return err
+	}
+
 	if err := s.Stager.SetStagingEnvironment(); err != nil {
 		s.Log.Error("Unable to setup environment variables: %s", err.Error())
-		os.Exit(11)
+		return err
 	}
 
 	return nil
@@ -249,8 +258,6 @@ func (s *Supplier) CreateDefaultEnv() error {
 		"RACK_ENV":  "production",
 	}
 
-	s.Log.BeginStep("Creating runtime environment")
-
 	for envVar, envDefault := range environmentDefaults {
 		if os.Getenv(envVar) == "" {
 			os.Setenv(envVar, envDefault)
@@ -260,15 +267,31 @@ func (s *Supplier) CreateDefaultEnv() error {
 		}
 	}
 
+	return nil
+}
+
+func (s *Supplier) WriteProfileD() error {
+	s.Log.BeginStep("Creating runtime environment")
+
 	scriptContents := `
-export LANG=$(LANG:-en_US.UTF-8}
-export RAILS_ENV=$(RAILS_ENV:-production}
-export RACK_ENV=$(RACK_ENV:-production}
-## TODO do below properly
-## export SECRET_KEY_BASE=$(SECRET_KEY_BASE:-1234}
-export RAILS_SERVE_STATIC_FILES=$(RAILS_SERVE_STATIC_FILES:-enabled}
-export RAILS_LOG_TO_STDOUT=$(RAILS_LOG_TO_STDOUT:-enabled}
+export LANG=${LANG:-en_US.UTF-8}
+export RAILS_ENV=${RAILS_ENV:-production}
+export RACK_ENV=${RACK_ENV:-production}
+export RAILS_SERVE_STATIC_FILES=${RAILS_SERVE_STATIC_FILES:-enabled}
+export RAILS_LOG_TO_STDOUT=${RAILS_LOG_TO_STDOUT:-enabled}
 `
+
+	hasRails41, err := s.Versions.HasGemVersion("rails", ">=4.1.0.beta1")
+	if err != nil {
+		return err
+	}
+	if hasRails41 {
+		secretKey, err := s.Command.Output(s.Stager.BuildDir(), "bundle", "exec", "rake", "secret")
+		if err != nil {
+			return fmt.Errorf("Running 'rake secret'", err)
+		}
+		scriptContents += fmt.Sprintf("\nexport SECRET_KEY_BASE=${SECRET_KEY_BASE:-%s}\n", secretKey)
+	}
 
 	return s.Stager.WriteProfileD("ruby.sh", scriptContents)
 }

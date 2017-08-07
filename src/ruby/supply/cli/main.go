@@ -56,6 +56,7 @@ func main() {
 		Manifest: manifest,
 		Log:      logger,
 		Versions: versions.New(stager.BuildDir(), manifest),
+		Command:  &libbuildpack.Command{},
 	}
 
 	err = supply.Run(&s)
