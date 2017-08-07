@@ -4,7 +4,6 @@
 package finalize_test
 
 import (
-	semver "github.com/blang/semver"
 	gomock "github.com/golang/mock/gomock"
 	reflect "reflect"
 )
@@ -45,15 +44,15 @@ func (_mr *MockVersionsMockRecorder) HasGem(arg0 interface{}) *gomock.Call {
 	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "HasGem", reflect.TypeOf((*MockVersions)(nil).HasGem), arg0)
 }
 
-// GemVersion mocks base method
-func (_m *MockVersions) GemVersion(_param0 string) (*semver.Version, error) {
-	ret := _m.ctrl.Call(_m, "GemVersion", _param0)
-	ret0, _ := ret[0].(*semver.Version)
+// HasGemVersion mocks base method
+func (_m *MockVersions) HasGemVersion(_param0 string, _param1 string) (bool, error) {
+	ret := _m.ctrl.Call(_m, "HasGemVersion", _param0, _param1)
+	ret0, _ := ret[0].(bool)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// GemVersion indicates an expected call of GemVersion
-func (_mr *MockVersionsMockRecorder) GemVersion(arg0 interface{}) *gomock.Call {
-	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "GemVersion", reflect.TypeOf((*MockVersions)(nil).GemVersion), arg0)
+// HasGemVersion indicates an expected call of HasGemVersion
+func (_mr *MockVersionsMockRecorder) HasGemVersion(arg0, arg1 interface{}) *gomock.Call {
+	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "HasGemVersion", reflect.TypeOf((*MockVersions)(nil).HasGemVersion), arg0, arg1)
 }

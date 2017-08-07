@@ -70,12 +70,24 @@ var _ = Describe("Finalize", func() {
 		Expect(err).To(BeNil())
 	})
 
-	FDescribe("GenerateReleaseYaml", func() {
+	Describe("GenerateReleaseYaml", func() {
+		var hasRack, hasThin bool
+		var railsVersion int
+		BeforeEach(func() {
+			hasRack = false
+			hasThin = false
+			railsVersion = 0
+		})
+		JustBeforeEach(func() {
+			mockVersions.EXPECT().HasGem("rack").Return(hasRack, nil)
+			mockVersions.EXPECT().HasGem("thin").Return(hasThin, nil)
+			mockVersions.EXPECT().HasGemVersion("rails", ">=4.0.0-beta").AnyTimes().Return(railsVersion >= 4, nil)
+			mockVersions.EXPECT().HasGemVersion("rails", ">=3.0.0").AnyTimes().Return(railsVersion >= 3, nil)
+			mockVersions.EXPECT().HasGemVersion("rails", ">=2.0.0").AnyTimes().Return(railsVersion >= 2, nil)
+		})
 		Context("Rails 4+", func() {
 			BeforeEach(func() {
-				mockVersions.EXPECT().HasGem("thin").Return(true, nil)
-				mockVersions.EXPECT().HasGem("rails").Return(true, nil)
-				mockVersions.EXPECT().HasGemVersion("rails", ">=4.0.0.beta").Return(true, nil)
+				railsVersion = 4
 			})
 			It("generates web, worker, rake and console process types", func() {
 				data, err := finalizer.GenerateReleaseYaml()
@@ -92,12 +104,11 @@ var _ = Describe("Finalize", func() {
 		})
 		Context("Rails 3.x", func() {
 			BeforeEach(func() {
-				mockVersions.EXPECT().HasGem("rails").Return(true, nil)
-				mockVersions.EXPECT().HasGemVersion("rails", ">=3.0.0").Return(true, nil)
+				railsVersion = 3
 			})
 			Context("thin is not present", func() {
 				BeforeEach(func() {
-					mockVersions.EXPECT().HasGem("thin").Return(false, nil)
+					hasThin = false
 				})
 				It("generates web, worker, rake and console process types", func() {
 					data, err := finalizer.GenerateReleaseYaml()
@@ -114,7 +125,7 @@ var _ = Describe("Finalize", func() {
 			})
 			Context("thin is present", func() {
 				BeforeEach(func() {
-					mockVersions.EXPECT().HasGem("thin").Return(true, nil)
+					hasThin = true
 				})
 				It("generates web, worker, rake and console process types", func() {
 					data, err := finalizer.GenerateReleaseYaml()
@@ -132,12 +143,11 @@ var _ = Describe("Finalize", func() {
 		})
 		Context("Rails 2.x", func() {
 			BeforeEach(func() {
-				mockVersions.EXPECT().HasGem("rails").Return(true, nil)
-				mockVersions.EXPECT().HasGemVersion("rails", ">=2.0.0").Return(true, nil)
+				railsVersion = 2
 			})
 			Context("thin is not present", func() {
 				BeforeEach(func() {
-					mockVersions.EXPECT().HasGem("thin").Return(false, nil)
+					hasThin = false
 				})
 				It("generates web, worker, rake and console process types", func() {
 					data, err := finalizer.GenerateReleaseYaml()
@@ -154,7 +164,7 @@ var _ = Describe("Finalize", func() {
 			})
 			Context("thin is present", func() {
 				BeforeEach(func() {
-					mockVersions.EXPECT().HasGem("thin").Return(true, nil)
+					hasThin = true
 				})
 				It("generates web, worker, rake and console process types", func() {
 					data, err := finalizer.GenerateReleaseYaml()
@@ -172,12 +182,11 @@ var _ = Describe("Finalize", func() {
 		})
 		Context("Rack", func() {
 			BeforeEach(func() {
-				mockVersions.EXPECT().HasGemVersion("rails", gomock.Any()).Return(false, nil)
-				mockVersions.EXPECT().HasGem("rack").Return(true, nil)
+				hasRack = true
 			})
 			Context("thin is not present", func() {
 				BeforeEach(func() {
-					mockVersions.EXPECT().HasGem("thin").Return(false, nil)
+					hasThin = false
 				})
 				It("generates web, rake and console process types", func() {
 					data, err := finalizer.GenerateReleaseYaml()
@@ -193,7 +202,7 @@ var _ = Describe("Finalize", func() {
 			})
 			Context("thin is present", func() {
 				BeforeEach(func() {
-					mockVersions.EXPECT().HasGem("thin").Return(true, nil)
+					hasThin = true
 				})
 				It("generates web, rake and console process types", func() {
 					data, err := finalizer.GenerateReleaseYaml()
@@ -210,9 +219,9 @@ var _ = Describe("Finalize", func() {
 		})
 		Context("Ruby", func() {
 			BeforeEach(func() {
-				mockVersions.EXPECT().HasGem("thin").Return(false, nil)
-				mockVersions.EXPECT().HasGemVersion("rails", gomock.Any()).Return(false, nil)
-				mockVersions.EXPECT().HasGem("rack").Return(false, nil)
+				hasRack = false
+				hasThin = false
+				railsVersion = 0
 			})
 			It("generates rake and console process types", func() {
 				data, err := finalizer.GenerateReleaseYaml()
