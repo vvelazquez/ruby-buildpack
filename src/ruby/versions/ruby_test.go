@@ -70,6 +70,15 @@ var _ = Describe("Ruby", func() {
 		PIt("Gemfile specifies rubinius", func() {})
 	})
 
+	Describe("RubyEngineVersion", func() {
+		It("returns the gem simplified ruby version", func() {
+			v := versions.New(tmpDir, manifest)
+			version, err := v.RubyEngineVersion()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(version).To(MatchRegexp("^\\d+\\.\\d+.0$"))
+		})
+	})
+
 	Describe("HasGem", func() {
 		BeforeEach(func() {
 			Expect(ioutil.WriteFile(filepath.Join(tmpDir, "Gemfile"), []byte(`gem 'roda'`), 0644)).To(Succeed())

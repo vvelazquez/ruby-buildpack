@@ -61,6 +61,16 @@ func (v *Versions) Version() (string, error) {
 	return version, nil
 }
 
+func (v *Versions) RubyEngineVersion() (string, error) {
+	code := `require 'rbconfig';RbConfig::CONFIG['ruby_version']`
+
+	data, err := v.run(v.buildDir, code, []string{})
+	if err != nil {
+		return "", err
+	}
+	return data.(string), nil
+}
+
 func (v *Versions) HasGemVersion(gem, constraint string) (bool, error) {
 	specs, err := v.specs()
 	if err != nil {

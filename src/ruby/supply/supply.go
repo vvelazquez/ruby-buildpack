@@ -25,6 +25,7 @@ type Manifest interface {
 }
 type Versions interface {
 	Version() (string, error)
+	RubyEngineVersion() (string, error)
 	HasGemVersion(gem, constraint string) (bool, error)
 }
 
@@ -126,23 +127,9 @@ func (s *Supplier) InstallBundler() error {
 		return err
 	}
 
-	if err := s.Stager.WriteProfileD("bundler.sh", fmt.Sprintf(`
-		export GEM_HOME=${GEM_HOME:-$DEPS_DIR/%s/gem_home}
-
-		## TODO 2.4.0 should be dynamic
-		export GEM_PATH=${GEM_PATH:-GEM_PATH=$DEPS_DIR/%s/vendor_bundle/ruby/2.4.0:$DEPS_DIR/%s/gem_home:$DEPS_DIR/%s/bundler}
-
-		## TODO Is this the right plan?
-		bundle config PATH "$DEPS_DIR/%s/vendor_bundle"
-		`, s.Stager.DepsIdx(), s.Stager.DepsIdx(), s.Stager.DepsIdx(), s.Stager.DepsIdx(), s.Stager.DepsIdx())); err != nil {
-		return err
-	}
-
 	if err := s.Stager.LinkDirectoryInDepDir(filepath.Join(s.Stager.DepDir(), "bundler", "bin"), "bin"); err != nil {
 		return err
 	}
-
-	// TODO Add above to profile.d dir (handle existing/missing)
 
 	return nil
 }
@@ -273,13 +260,25 @@ func (s *Supplier) CreateDefaultEnv() error {
 func (s *Supplier) WriteProfileD() error {
 	s.Log.BeginStep("Creating runtime environment")
 
-	scriptContents := `
+	rubyEngineVersion, err := s.Versions.RubyEngineVersion()
+	if err != nil {
+		return err
+	}
+
+	depsIdx := s.Stager.DepsIdx()
+	scriptContents := fmt.Sprintf(`
 export LANG=${LANG:-en_US.UTF-8}
 export RAILS_ENV=${RAILS_ENV:-production}
 export RACK_ENV=${RACK_ENV:-production}
 export RAILS_SERVE_STATIC_FILES=${RAILS_SERVE_STATIC_FILES:-enabled}
 export RAILS_LOG_TO_STDOUT=${RAILS_LOG_TO_STDOUT:-enabled}
-`
+
+export GEM_HOME=${GEM_HOME:-$DEPS_DIR/%s/gem_home}
+export GEM_PATH=${GEM_PATH:-GEM_PATH=$DEPS_DIR/%s/vendor_bundle/ruby/%s:$DEPS_DIR/%s/gem_home:$DEPS_DIR/%s/bundler}
+
+## TODO Is this the right plan?
+bundle config PATH "$DEPS_DIR/%s/vendor_bundle"
+		`, depsIdx, depsIdx, rubyEngineVersion, depsIdx, depsIdx, depsIdx)
 
 	hasRails41, err := s.Versions.HasGemVersion("rails", ">=4.1.0.beta1")
 	if err != nil {
