@@ -45,18 +45,13 @@ var _ = Describe("Finalize", func() {
 		logger = libbuildpack.NewLogger(ansicleaner.New(buffer))
 
 		mockCtrl = gomock.NewController(GinkgoT())
-		// mockManifest = NewMockManifest(mockCtrl)
 		mockStager = NewMockStager(mockCtrl)
 		mockVersions = NewMockVersions(mockCtrl)
-
-		// args := []string{buildDir, "", depsDir, depsIdx}
-		// stager := libbuildpack.NewStager(args, logger, &libbuildpack.Manifest{})
 
 		finalizer = &finalize.Finalizer{
 			Stager:   mockStager,
 			Versions: mockVersions,
-			// Manifest: mockManifest,
-			Log: logger,
+			Log:      logger,
 		}
 	})
 
@@ -102,6 +97,7 @@ var _ = Describe("Finalize", func() {
 				}))
 			})
 		})
+
 		Context("Rails 3.x", func() {
 			BeforeEach(func() {
 				railsVersion = 3

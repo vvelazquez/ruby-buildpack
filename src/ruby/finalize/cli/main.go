@@ -43,8 +43,7 @@ func main() {
 	}
 
 	f := finalize.Finalizer{
-		Stager: stager,
-		// Manifest: manifest,
+		Stager:   stager,
 		Log:      logger,
 		Versions: versions.New(stager.BuildDir(), manifest),
 	}
