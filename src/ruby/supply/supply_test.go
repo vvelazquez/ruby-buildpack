@@ -19,8 +19,6 @@ import (
 //go:generate mockgen -source=supply.go --destination=mocks_test.go --package=supply_test
 
 var _ = Describe("Supply", func() {
-	PIt("MOST TESTS", func() {})
-
 	var (
 		err          error
 		buildDir     string
@@ -75,6 +73,11 @@ var _ = Describe("Supply", func() {
 		err = os.RemoveAll(depsDir)
 		Expect(err).To(BeNil())
 	})
+
+	PIt("InstallBundler", func() {})
+	PIt("InstallNode", func() {})
+	PIt("InstallRuby", func() {})
+	PIt("InstallGems", func() {})
 
 	Describe("CreateDefaultEnv", func() {
 		Describe("SecretKeyBase", func() {
