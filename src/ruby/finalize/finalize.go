@@ -27,6 +27,8 @@ type Finalizer struct {
 }
 
 func Run(f *Finalizer) error {
+	f.Log.BeginStep("Finalizing Ruby")
+
 	if err := f.Setup(); err != nil {
 		f.Log.Error("Error determining versions: %v", err)
 	}

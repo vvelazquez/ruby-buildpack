@@ -48,6 +48,8 @@ type Supplier struct {
 }
 
 func Run(s *Supplier) error {
+	f.Log.BeginStep("Supplying Ruby")
+
 	if err := s.CreateDefaultEnv(); err != nil {
 		s.Log.Error("Unable to setup default environment: %s", err.Error())
 		return err
