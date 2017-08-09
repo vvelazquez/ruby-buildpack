@@ -74,48 +74,118 @@ var _ = Describe("Finalize", func() {
 			Expect(finalizer.InstallPlugins()).To(Succeed())
 		})
 
-		Context("has rails_12factor gem", func() {
-			BeforeEach(func() { mockVersions.EXPECT().HasGem("rails_12factor").AnyTimes().Return(true, nil) })
-			It("installs no plugins", func() {
-				Expect(filepath.Join(buildDir, "vendor", "plugins")).ToNot(BeADirectory())
+		Context("rails 3", func() {
+			BeforeEach(func() {
+				finalizer.RailsVersion = 3
+			})
+
+			Context("has rails_12factor gem", func() {
+				BeforeEach(func() {
+					finalizer.Gem12Factor = true
+				})
+				It("installs no plugins", func() {
+					Expect(filepath.Join(buildDir, "vendor", "plugins")).ToNot(BeADirectory())
+				})
+			})
+
+			Context("does not have rails_12factor gem", func() {
+				BeforeEach(func() {
+					finalizer.Gem12Factor = false
+				})
+
+				Context("the app has the gem rails_stdout_logging", func() {
+					BeforeEach(func() {
+						finalizer.GemStdoutLogging = true
+					})
+
+					It("does not install the plugin rails_log_stdout", func() {
+						Expect(filepath.Join(buildDir, "vendor", "plugins", "rails_log_stdout")).ToNot(BeADirectory())
+					})
+				})
+
+				Context("the app has the gem rails_serve_static_assets", func() {
+					BeforeEach(func() {
+						finalizer.GemStaticAssets = true
+					})
+
+					It("does not install the plugin rails3_serve_static_assets", func() {
+						Expect(filepath.Join(buildDir, "vendor", "plugins", "rails3_serve_static_assets")).ToNot(BeADirectory())
+					})
+				})
+
+				Context("the app has neither above gem", func() {
+					It("installs plugin rails3_serve_static_assets", func() {
+						Expect(filepath.Join(buildDir, "vendor", "plugins", "rails3_serve_static_assets", "init.rb")).To(BeARegularFile())
+					})
+
+					It("installs plugin rails_log_stdout", func() {
+						Expect(filepath.Join(buildDir, "vendor", "plugins", "rails_log_stdout", "init.rb")).To(BeARegularFile())
+					})
+				})
 			})
 		})
 
-		Context("does not have rails_12factor gem", func() {
-			BeforeEach(func() { mockVersions.EXPECT().HasGem("rails_12factor").AnyTimes().Return(false, nil) })
+		Context("rails 4", func() {
+			var helpMessage string
+			BeforeEach(func() {
+				helpMessage = "Include 'rails_12factor' gem to enable all platform features"
+				finalizer.RailsVersion = 4
+			})
 
-			Context("the app has the gem rails_stdout_logging", func() {
-				BeforeEach(func() {
-					mockVersions.EXPECT().HasGem("rails_serve_static_assets").AnyTimes().Return(false, nil)
-					mockVersions.EXPECT().HasGem("rails_stdout_logging").AnyTimes().Return(true, nil)
-				})
+			It("installs no plugins", func() {
+				Expect(filepath.Join(buildDir, "vendor", "plugins")).ToNot(BeADirectory())
+			})
 
-				It("does not install the plugin rails_log_stdout", func() {
-					Expect(filepath.Join(buildDir, "vendor", "plugins", "rails_log_stdout")).ToNot(BeADirectory())
+			Context("has rails_12factor gem", func() {
+				BeforeEach(func() { finalizer.Gem12Factor = true })
+				It("do not suggest rails_12factor to user", func() {
+					Expect(buffer.String()).ToNot(ContainSubstring(helpMessage))
 				})
 			})
 
-			Context("the app has the gem rails_serve_static_assets", func() {
+			Context("has rails_serve_static_assets and rails_stdout_logging gems", func() {
 				BeforeEach(func() {
-					mockVersions.EXPECT().HasGem("rails_serve_static_assets").AnyTimes().Return(true, nil)
-					mockVersions.EXPECT().HasGem("rails_stdout_logging").AnyTimes().Return(false, nil)
+					finalizer.GemStdoutLogging = true
+					finalizer.GemStaticAssets = true
 				})
-
-				It("does not install the plugin rails3_serve_static_assets", func() {
-					Expect(filepath.Join(buildDir, "vendor", "plugins", "rails3_serve_static_assets")).ToNot(BeADirectory())
+				It("do not suggest rails_12factor to user", func() {
+					Expect(buffer.String()).ToNot(ContainSubstring(helpMessage))
 				})
 			})
 
-			Context("the app has neither above gem", func() {
-				BeforeEach(func() { mockVersions.EXPECT().HasGem(gomock.Any()).AnyTimes().Return(false, nil) })
-
-				It("installs plugin rails3_serve_static_assets", func() {
-					Expect(filepath.Join(buildDir, "vendor", "plugins", "rails3_serve_static_assets", "init.rb")).To(BeARegularFile())
+			Context("has rails_serve_static_assets gem, but NOT rails_stdout_logging gem", func() {
+				BeforeEach(func() {
+					finalizer.GemStaticAssets = true
 				})
-
-				It("installs plugin rails_log_stdout", func() {
-					Expect(filepath.Join(buildDir, "vendor", "plugins", "rails_log_stdout", "init.rb")).To(BeARegularFile())
+				It("suggest rails_12factor to user", func() {
+					Expect(buffer.String()).To(ContainSubstring(helpMessage))
 				})
+			})
+
+			Context("has rails_stdout_logging gem, but NOT rails_serve_static_assets gem", func() {
+				BeforeEach(func() {
+					finalizer.GemStdoutLogging = true
+				})
+				It("suggest rails_12factor to user", func() {
+					Expect(buffer.String()).To(ContainSubstring(helpMessage))
+				})
+			})
+
+			Context("has none of the above gems", func() {
+				It("suggest rails_12factor to user", func() {
+					Expect(buffer.String()).To(ContainSubstring(helpMessage))
+				})
+			})
+		})
+		Context("rails 5", func() {
+			BeforeEach(func() {
+				finalizer.RailsVersion = 5
+			})
+			It("do not suggest anything", func() {
+				Expect(buffer.String()).To(Equal(""))
+			})
+			It("installs no plugins", func() {
+				Expect(filepath.Join(buildDir, "vendor", "plugins")).ToNot(BeADirectory())
 			})
 		})
 	})

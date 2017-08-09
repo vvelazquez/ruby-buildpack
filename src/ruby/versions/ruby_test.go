@@ -110,6 +110,39 @@ BUNDLED WITH
 		})
 	})
 
+	Describe("GemMajorVersion", func() {
+		BeforeEach(func() {
+			Expect(ioutil.WriteFile(filepath.Join(tmpDir, "Gemfile"), []byte(`gem 'roda'`), 0644)).To(Succeed())
+			Expect(ioutil.WriteFile(filepath.Join(tmpDir, "Gemfile.lock"), []byte(`GEM
+  specs:
+    rack (2.0.3)
+    roda (4.28.0.beta1)
+      rack
+
+PLATFORMS
+  ruby
+
+DEPENDENCIES
+  roda
+			`), 0644)).To(Succeed())
+		})
+
+		It("returns 2 for rack", func() {
+			v := versions.New(tmpDir, manifest)
+			Expect(v.GemMajorVersion("rack")).To(Equal(2))
+		})
+
+		It("returns 4 for roda", func() {
+			v := versions.New(tmpDir, manifest)
+			Expect(v.GemMajorVersion("roda")).To(Equal(4))
+		})
+
+		It("returns -1 for rails", func() {
+			v := versions.New(tmpDir, manifest)
+			Expect(v.GemMajorVersion("rails")).To(Equal(-1))
+		})
+	})
+
 	Describe("HasGemVersion", func() {
 		BeforeEach(func() {
 			Expect(ioutil.WriteFile(filepath.Join(tmpDir, "Gemfile"), []byte(`gem 'roda'`), 0644)).To(Succeed())
@@ -140,6 +173,20 @@ BUNDLED WITH
 		It("returns false for <2.28.0 for roda", func() {
 			v := versions.New(tmpDir, manifest)
 			match, err := v.HasGemVersion("roda", "<2.28.0")
+			Expect(err).ToNot(HaveOccurred())
+			Expect(match).To(BeFalse())
+		})
+
+		It("returns true for >=2.2.0, <=3.0.0 for roda", func() {
+			v := versions.New(tmpDir, manifest)
+			match, err := v.HasGemVersion("roda", ">=2.2.0", "<=3.0.0")
+			Expect(err).ToNot(HaveOccurred())
+			Expect(match).To(BeTrue())
+		})
+
+		It("returns false for >=2.2.0, <=2.3.0 for roda", func() {
+			v := versions.New(tmpDir, manifest)
+			match, err := v.HasGemVersion("roda", ">=2.2.0", "<=2.3.0")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(match).To(BeFalse())
 		})

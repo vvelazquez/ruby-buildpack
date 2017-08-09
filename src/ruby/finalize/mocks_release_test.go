@@ -44,15 +44,33 @@ func (_mr *MockVersionsMockRecorder) HasGem(arg0 interface{}) *gomock.Call {
 	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "HasGem", reflect.TypeOf((*MockVersions)(nil).HasGem), arg0)
 }
 
+// GemMajorVersion mocks base method
+func (_m *MockVersions) GemMajorVersion(_param0 string) (int, error) {
+	ret := _m.ctrl.Call(_m, "GemMajorVersion", _param0)
+	ret0, _ := ret[0].(int)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GemMajorVersion indicates an expected call of GemMajorVersion
+func (_mr *MockVersionsMockRecorder) GemMajorVersion(arg0 interface{}) *gomock.Call {
+	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "GemMajorVersion", reflect.TypeOf((*MockVersions)(nil).GemMajorVersion), arg0)
+}
+
 // HasGemVersion mocks base method
-func (_m *MockVersions) HasGemVersion(_param0 string, _param1 string) (bool, error) {
-	ret := _m.ctrl.Call(_m, "HasGemVersion", _param0, _param1)
+func (_m *MockVersions) HasGemVersion(_param0 string, _param1 ...string) (bool, error) {
+	_s := []interface{}{_param0}
+	for _, _x := range _param1 {
+		_s = append(_s, _x)
+	}
+	ret := _m.ctrl.Call(_m, "HasGemVersion", _s...)
 	ret0, _ := ret[0].(bool)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // HasGemVersion indicates an expected call of HasGemVersion
-func (_mr *MockVersionsMockRecorder) HasGemVersion(arg0, arg1 interface{}) *gomock.Call {
-	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "HasGemVersion", reflect.TypeOf((*MockVersions)(nil).HasGemVersion), arg0, arg1)
+func (_mr *MockVersionsMockRecorder) HasGemVersion(arg0 interface{}, arg1 ...interface{}) *gomock.Call {
+	_s := append([]interface{}{arg0}, arg1...)
+	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "HasGemVersion", reflect.TypeOf((*MockVersions)(nil).HasGemVersion), _s...)
 }

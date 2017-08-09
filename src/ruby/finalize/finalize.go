@@ -17,12 +17,20 @@ type Stager interface {
 }
 
 type Finalizer struct {
-	Stager   Stager
-	Versions Versions
-	Log      *libbuildpack.Logger
+	Stager           Stager
+	Versions         Versions
+	Log              *libbuildpack.Logger
+	Gem12Factor      bool
+	GemStaticAssets  bool
+	GemStdoutLogging bool
+	RailsVersion     int
 }
 
 func Run(f *Finalizer) error {
+	if err := f.Setup(); err != nil {
+		f.Log.Error("Error determining versions: %v", err)
+	}
+
 	if err := f.PrecompileAssets(); err != nil {
 		f.Log.Error("Error precompiling assets: %v", err)
 	}
@@ -33,6 +41,32 @@ func Run(f *Finalizer) error {
 	}
 	releasePath := filepath.Join(f.Stager.BuildDir(), "tmp", "ruby-buildpack-release-step.yml")
 	libbuildpack.NewYAML().Write(releasePath, data)
+
+	return nil
+}
+
+func (f *Finalizer) Setup() error {
+	var err error
+
+	f.Gem12Factor, err = f.Versions.HasGem("rails_12factor")
+	if err != nil {
+		return err
+	}
+
+	f.GemStdoutLogging, err = f.Versions.HasGem("rails_stdout_logging")
+	if err != nil {
+		return err
+	}
+
+	f.GemStaticAssets, err = f.Versions.HasGem("rails_serve_static_assets")
+	if err != nil {
+		return err
+	}
+
+	f.RailsVersion, err = f.Versions.GemMajorVersion("rails")
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -56,35 +90,47 @@ func (f *Finalizer) PrecompileAssets() error {
 
 	f.Log.Info("Asset precompilation completed (%v)", time.Since(startTime))
 
+	if f.RailsVersion >= 4 && err == nil {
+		f.Log.Info("Cleaning assets")
+		cmd = exec.Command("bundle", "exec", "rake", "assets:clean")
+		cmd.Dir = f.Stager.BuildDir()
+		cmd.Stdout = text.NewIndentWriter(os.Stdout, []byte("       "))
+		cmd.Stderr = text.NewIndentWriter(os.Stderr, []byte("       "))
+		err = cmd.Run()
+	}
+
 	return err
 }
 
 func (f *Finalizer) InstallPlugins() error {
-	gem, err := f.Versions.HasGem("rails_12factor")
-	if err != nil {
-		return err
-	}
-	if gem {
+	if f.Gem12Factor {
 		return nil
 	}
 
-	if err := f.installPluginStdoutLogger(); err != nil {
-		return err
+	if f.RailsVersion == 4 {
+		if !(f.GemStdoutLogging && f.GemStaticAssets) {
+			f.Log.Protip("Include 'rails_12factor' gem to enable all platform features", "https://devcenter.heroku.com/articles/rails-integration-gems")
+		}
+		return nil
 	}
-	if err := f.installPluginServeStaticAssets(); err != nil {
-		return err
+
+	if f.RailsVersion == 2 || f.RailsVersion == 3 {
+		if err := f.installPluginStdoutLogger(); err != nil {
+			return err
+		}
+		if err := f.installPluginServeStaticAssets(); err != nil {
+			return err
+		}
 	}
 	return nil
 }
 
 func (f *Finalizer) installPluginStdoutLogger() error {
-	gem, err := f.Versions.HasGem("rails_stdout_logging")
-	if err != nil {
-		return err
-	}
-	if gem {
+	if f.GemStdoutLogging {
 		return nil
 	}
+
+	f.Log.BeginStep("Injecting plugin 'rails_log_stdout'")
 
 	code := `
 begin
@@ -113,13 +159,11 @@ end
 }
 
 func (f *Finalizer) installPluginServeStaticAssets() error {
-	gem, err := f.Versions.HasGem("rails_serve_static_assets")
-	if err != nil {
-		return err
-	}
-	if gem {
+	if f.GemStaticAssets {
 		return nil
 	}
+
+	f.Log.BeginStep("Injecting plugin 'rails3_serve_static_assets'")
 
 	code := "Rails.application.class.config.serve_static_assets = true\n"
 
@@ -131,3 +175,5 @@ func (f *Finalizer) installPluginServeStaticAssets() error {
 	}
 	return nil
 }
+
+// func(f *Finalizer

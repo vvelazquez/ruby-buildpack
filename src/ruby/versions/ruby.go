@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/cloudfoundry/libbuildpack"
@@ -71,7 +72,7 @@ func (v *Versions) RubyEngineVersion() (string, error) {
 	return data.(string), nil
 }
 
-func (v *Versions) HasGemVersion(gem, constraint string) (bool, error) {
+func (v *Versions) HasGemVersion(gem string, constraints ...string) (bool, error) {
 	specs, err := v.specs()
 	if err != nil {
 		return false, err
@@ -80,9 +81,12 @@ func (v *Versions) HasGemVersion(gem, constraint string) (bool, error) {
 		return false, nil
 	}
 
-	code := `Gem::Requirement.create(input[1]).satisfied_by? Gem::Version.new(input[0])`
+	code := `
+		gem_version = input.shift
+		Gem::Requirement.create(input).satisfied_by? Gem::Version.new(gem_version)
+	`
 
-	data, err := v.run(v.buildDir, code, []string{specs[gem], constraint})
+	data, err := v.run(v.buildDir, code, append([]string{specs[gem]}, constraints...))
 	if err != nil {
 		return false, err
 	}
@@ -99,6 +103,28 @@ func (v *Versions) HasGem(gem string) (bool, error) {
 		return true, nil
 	}
 	return false, nil
+}
+
+func (v *Versions) GemMajorVersion(gem string) (int, error) {
+	specs, err := v.specs()
+	if err != nil {
+		return -1, err
+	}
+	if specs[gem] == "" {
+		return -1, nil
+	}
+
+	code := `Gem::Version.new(input.first).segments.first.to_s`
+	data, err := v.run(v.buildDir, code, []string{specs[gem]})
+	if err != nil {
+		return -1, err
+	}
+
+	if i, err := strconv.Atoi(data.(string)); err == nil {
+		return i, nil
+	} else {
+		return -1, err
+	}
 }
 
 func (v *Versions) specs() (map[string]string, error) {
