@@ -14,7 +14,7 @@ import (
 )
 
 type Command interface {
-	// Execute(string, io.Writer, io.Writer, string, ...string) error
+	Execute(string, io.Writer, io.Writer, string, ...string) error
 	Output(string, string, ...string) (string, error)
 }
 
@@ -80,11 +80,10 @@ func Run(s *Supplier) error {
 			return err
 		}
 
-		// TODO
-		// if err := s.YarnInstall(); err != nil {
-		// 	s.Log.Error("Unable to install node: %s", err.Error())
-		// 	return err
-		// }
+		if err := s.InstallYarnDependencies(); err != nil {
+			s.Log.Error("Unable to install yarn dependencies: %s", err.Error())
+			return err
+		}
 	}
 
 	if err := s.InstallGems(); err != nil {
@@ -125,6 +124,32 @@ func (s *Supplier) InstallYarn() error {
 		return err
 	}
 	return s.Stager.LinkDirectoryInDepDir(filepath.Join(s.Stager.DepDir(), "yarn", "bin"), "bin")
+}
+
+func (s *Supplier) InstallYarnDependencies() error {
+	exists, err := libbuildpack.FileExists(filepath.Join(s.Stager.BuildDir(), "yarn.lock"))
+	if err != nil {
+		return err
+	}
+	if !exists {
+		return nil
+	}
+	exists, err = libbuildpack.FileExists(filepath.Join(s.Stager.BuildDir(), "bin/yarn"))
+	if err != nil {
+		return err
+	}
+	if !exists {
+		return nil
+	}
+
+	s.Log.BeginStep("Installing dependencies using yarn")
+
+	return s.Command.Execute(
+		s.Stager.BuildDir(),
+		text.NewIndentWriter(os.Stdout, []byte("       ")),
+		text.NewIndentWriter(os.Stderr, []byte("       ")),
+		"bin/yarn", "install",
+	)
 }
 
 func (s *Supplier) InstallBundler() error {

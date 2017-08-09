@@ -167,6 +167,38 @@ var _ = Describe("Supply", func() {
 			})
 		})
 
+		Describe("InstallYarnDependencies", func() {
+			Context("app has yarn.lock nd bin/yarn files", func() {
+				BeforeEach(func() {
+					Expect(ioutil.WriteFile(filepath.Join(buildDir, "yarn.lock"), []byte("contents"), 0644)).To(Succeed())
+					Expect(os.MkdirAll(filepath.Join(buildDir, "bin"), 0755)).To(Succeed())
+					Expect(ioutil.WriteFile(filepath.Join(buildDir, "bin", "yarn"), []byte("executable"), 0755)).To(Succeed())
+				})
+				It("runs bin/yarn install", func() {
+					mockCommand.EXPECT().Execute(buildDir, gomock.Any(), gomock.Any(), "bin/yarn", "install").Return(nil)
+					Expect(supplier.InstallYarnDependencies()).To(Succeed())
+				})
+			})
+			Context("app does not have a yarn.lock file", func() {
+				BeforeEach(func() {
+					Expect(ioutil.WriteFile(filepath.Join(buildDir, "yarn.lock"), []byte("contents"), 0644)).To(Succeed())
+				})
+				It("does NOT run yarn install", func() {
+					Expect(supplier.InstallYarnDependencies()).To(Succeed())
+				})
+			})
+
+			Context("app does not have a bin/yarn file", func() {
+				BeforeEach(func() {
+					Expect(os.MkdirAll(filepath.Join(buildDir, "bin"), 0755)).To(Succeed())
+					Expect(ioutil.WriteFile(filepath.Join(buildDir, "bin", "yarn"), []byte("executable"), 0755)).To(Succeed())
+				})
+				It("does NOT run yarn install", func() {
+					Expect(supplier.InstallYarnDependencies()).To(Succeed())
+				})
+			})
+		})
+
 		Describe("HasNode", func() {
 			Context("node is already installed", func() {
 				BeforeEach(func() {
