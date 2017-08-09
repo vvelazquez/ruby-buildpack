@@ -66,9 +66,6 @@ var _ = Describe("Finalize", func() {
 		Expect(err).To(BeNil())
 	})
 
-	PIt("SECRET_KEY_BASE in rails >= 4.1", func() {})
-	PIt("LANG defaults to en_US.UTF-8", func() {})
-
 	Describe("Install plugins", func() {
 		JustBeforeEach(func() {
 			Expect(finalizer.InstallPlugins()).To(Succeed())
