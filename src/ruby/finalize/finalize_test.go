@@ -189,4 +189,26 @@ var _ = Describe("Finalize", func() {
 			})
 		})
 	})
+
+	Describe("best practice warnings", func() {
+		Context("RAILS_ENV == production", func() {
+			BeforeEach(func() { os.Setenv("RAILS_ENV", "production") })
+			AfterEach(func() { os.Setenv("RAILS_ENV", "") })
+
+			It("does not warn the user", func() {
+				finalizer.BestPracticeWarnings()
+				Expect(buffer.String()).To(Equal(""))
+			})
+		})
+
+		Context("RAILS_ENV != production", func() {
+			BeforeEach(func() { os.Setenv("RAILS_ENV", "otherenv") })
+			AfterEach(func() { os.Setenv("RAILS_ENV", "") })
+
+			It("warns the user", func() {
+				finalizer.BestPracticeWarnings()
+				Expect(buffer.String()).To(ContainSubstring("You are deploying to a non-production environment: otherenv"))
+			})
+		})
+	})
 })

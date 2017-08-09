@@ -35,6 +35,8 @@ func Run(f *Finalizer) error {
 		f.Log.Error("Error precompiling assets: %v", err)
 	}
 
+	f.BestPracticeWarnings()
+
 	data, err := f.GenerateReleaseYaml()
 	if err != nil {
 		f.Log.Error("Error generating release YAML: %v", err)
@@ -176,4 +178,8 @@ func (f *Finalizer) installPluginServeStaticAssets() error {
 	return nil
 }
 
-// func(f *Finalizer
+func (f *Finalizer) BestPracticeWarnings() {
+	if os.Getenv("RAILS_ENV") != "production" {
+		f.Log.Warning("You are deploying to a non-production environment: %s", os.Getenv("RAILS_ENV"))
+	}
+}
