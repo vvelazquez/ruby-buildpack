@@ -1,6 +1,8 @@
 package finalize
 
 import (
+	"fmt"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -55,4 +57,77 @@ func (f *Finalizer) PrecompileAssets() error {
 	f.Log.Info("Asset precompilation completed (%v)", time.Since(startTime))
 
 	return err
+}
+
+func (f *Finalizer) InstallPlugins() error {
+	gem, err := f.Versions.HasGem("rails_12factor")
+	if err != nil {
+		return err
+	}
+	if gem {
+		return nil
+	}
+
+	if err := f.installPluginStdoutLogger(); err != nil {
+		return err
+	}
+	if err := f.installPluginServeStaticAssets(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (f *Finalizer) installPluginStdoutLogger() error {
+	gem, err := f.Versions.HasGem("rails_stdout_logging")
+	if err != nil {
+		return err
+	}
+	if gem {
+		return nil
+	}
+
+	code := `
+begin
+  STDOUT.sync = true
+  def Rails.cloudfoundry_stdout_logger
+    logger = Logger.new(STDOUT)
+    logger = ActiveSupport::TaggedLogging.new(logger) if defined?(ActiveSupport::TaggedLogging)
+    level = ENV['LOG_LEVEL'].to_s.upcase
+    level = 'INFO' unless %w[DEBUG INFO WARN ERROR FATAL UNKNOWN].include?(level)
+    logger.level = Logger.const_get(level)
+    logger
+  end
+  Rails.logger = Rails.application.config.logger = Rails.cloudfoundry_stdout_logger
+rescue Exception => ex
+  puts %Q{WARNING: Exception during rails_log_stdout init: #{ex.message}}
+end
+`
+
+	if err := os.MkdirAll(filepath.Join(f.Stager.BuildDir(), "vendor", "plugins", "rails_log_stdout"), 0755); err != nil {
+		return fmt.Errorf("Error creating rails_log_stdout plugin directory: %v", err)
+	}
+	if err := ioutil.WriteFile(filepath.Join(f.Stager.BuildDir(), "vendor", "plugins", "rails_log_stdout", "init.rb"), []byte(code), 0644); err != nil {
+		return fmt.Errorf("Error writing rails_log_stdout plugin file: %v", err)
+	}
+	return nil
+}
+
+func (f *Finalizer) installPluginServeStaticAssets() error {
+	gem, err := f.Versions.HasGem("rails_serve_static_assets")
+	if err != nil {
+		return err
+	}
+	if gem {
+		return nil
+	}
+
+	code := "Rails.application.class.config.serve_static_assets = true\n"
+
+	if err := os.MkdirAll(filepath.Join(f.Stager.BuildDir(), "vendor", "plugins", "rails3_serve_static_assets"), 0755); err != nil {
+		return fmt.Errorf("Error creating rails3_serve_static_assets plugin directory: %v", err)
+	}
+	if err := ioutil.WriteFile(filepath.Join(f.Stager.BuildDir(), "vendor", "plugins", "rails3_serve_static_assets", "init.rb"), []byte(code), 0644); err != nil {
+		return fmt.Errorf("Error writing rails3_serve_static_assets plugin file: %v", err)
+	}
+	return nil
 }
