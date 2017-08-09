@@ -187,6 +187,54 @@ var _ = Describe("Finalize", func() {
 		})
 	})
 
+	Describe("create database.yml", func() {
+		Context("config directory exists and activerecord < 4.1.0.beta", func() {
+			BeforeEach(func() {
+				Expect(os.MkdirAll(filepath.Join(buildDir, "config"), 0755)).To(Succeed())
+				mockVersions.EXPECT().HasGemVersion("activerecord", ">=4.1.0.beta").Return(false, nil)
+			})
+
+			It("writes config/database.yml", func() {
+				finalizer.WriteDatabaseYml()
+				Expect(filepath.Join(buildDir, "config", "database.yml")).To(BeARegularFile())
+			})
+
+			It("logs topic", func() {
+				finalizer.WriteDatabaseYml()
+				Expect(buffer.String()).To(ContainSubstring("Writing config/database.yml to read from DATABASE_URL"))
+			})
+		})
+
+		Context("config directory does not exists", func() {
+			It("does not write config/database.yml", func() {
+				finalizer.WriteDatabaseYml()
+				Expect(filepath.Join(buildDir, "config", "database.yml")).ToNot(BeAnExistingFile())
+			})
+
+			It("does not log", func() {
+				finalizer.WriteDatabaseYml()
+				Expect(buffer.String()).To(BeEmpty())
+			})
+		})
+
+		Context("config directory exists, but activerecord >= 4.1.0.beta", func() {
+			BeforeEach(func() {
+				Expect(os.MkdirAll(filepath.Join(buildDir, "config"), 0755)).To(Succeed())
+				mockVersions.EXPECT().HasGemVersion("activerecord", ">=4.1.0.beta").Return(true, nil)
+			})
+
+			It("does not write config/database.yml", func() {
+				finalizer.WriteDatabaseYml()
+				Expect(filepath.Join(buildDir, "config", "database.yml")).ToNot(BeAnExistingFile())
+			})
+
+			It("does not log", func() {
+				finalizer.WriteDatabaseYml()
+				Expect(buffer.String()).To(BeEmpty())
+			})
+		})
+	})
+
 	Describe("best practice warnings", func() {
 		Context("RAILS_ENV == production", func() {
 			BeforeEach(func() { os.Setenv("RAILS_ENV", "production") })

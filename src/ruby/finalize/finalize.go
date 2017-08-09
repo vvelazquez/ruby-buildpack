@@ -31,6 +31,10 @@ func Run(f *Finalizer) error {
 		f.Log.Error("Error determining versions: %v", err)
 	}
 
+	if err := f.WriteDatabaseYml(); err != nil {
+		f.Log.Error("Error writing database.yml: %v", err)
+	}
+
 	if err := f.PrecompileAssets(); err != nil {
 		f.Log.Error("Error precompiling assets: %v", err)
 	}
@@ -67,6 +71,26 @@ func (f *Finalizer) Setup() error {
 
 	f.RailsVersion, err = f.Versions.GemMajorVersion("rails")
 	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (f *Finalizer) WriteDatabaseYml() error {
+	if exists, err := libbuildpack.FileExists(filepath.Join(f.Stager.BuildDir(), "config")); err != nil {
+		return err
+	} else if !exists {
+		return nil
+	}
+	if rails41Plus, err := f.Versions.HasGemVersion("activerecord", ">=4.1.0.beta"); err != nil {
+		return err
+	} else if rails41Plus {
+		return nil
+	}
+
+	f.Log.BeginStep("Writing config/database.yml to read from DATABASE_URL")
+	if err := ioutil.WriteFile(filepath.Join(f.Stager.BuildDir(), "config", "database.yml"), []byte(config_database_yml), 0644); err != nil {
 		return err
 	}
 
