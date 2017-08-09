@@ -69,16 +69,22 @@ func Run(s *Supplier) error {
 		return err
 	}
 
-	// TODO not all apps need this
-	if err := s.InstallNode("6.x"); err != nil {
-		s.Log.Error("Unable to install node: %s", err.Error())
-		return err
-	}
+	if !s.HasNode() {
+		if err := s.InstallNode("6.x"); err != nil {
+			s.Log.Error("Unable to install node: %s", err.Error())
+			return err
+		}
 
-	// TODO not all apps need this
-	if err := s.InstallYarn(); err != nil {
-		s.Log.Error("Unable to install node: %s", err.Error())
-		return err
+		if err := s.InstallYarn(); err != nil {
+			s.Log.Error("Unable to install node: %s", err.Error())
+			return err
+		}
+
+		// TODO
+		// if err := s.YarnInstall(); err != nil {
+		// 	s.Log.Error("Unable to install node: %s", err.Error())
+		// 	return err
+		// }
 	}
 
 	if err := s.InstallGems(); err != nil {
@@ -100,6 +106,14 @@ func Run(s *Supplier) error {
 }
 
 func (s *Supplier) InstallYarn() error {
+	exists, err := libbuildpack.FileExists(filepath.Join(s.Stager.BuildDir(), "yarn.lock"))
+	if err != nil {
+		return err
+	}
+	if !exists {
+		return nil
+	}
+
 	tempDir, err := ioutil.TempDir("", "node")
 	if err != nil {
 		return err
@@ -164,6 +178,11 @@ func (s *Supplier) InstallNode(version string) error {
 	}
 
 	return s.Stager.LinkDirectoryInDepDir(filepath.Join(nodeInstallDir, "bin"), "bin")
+}
+
+func (s *Supplier) HasNode() bool {
+	_, err := s.Command.Output(s.Stager.BuildDir(), "node", "--version")
+	return err == nil
 }
 
 func (s *Supplier) InstallRuby(version string) error {

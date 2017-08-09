@@ -145,6 +145,19 @@ func (_mr *MockVersionsMockRecorder) Version() *gomock.Call {
 	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "Version", reflect.TypeOf((*MockVersions)(nil).Version))
 }
 
+// RubyEngineVersion mocks base method
+func (_m *MockVersions) RubyEngineVersion() (string, error) {
+	ret := _m.ctrl.Call(_m, "RubyEngineVersion")
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// RubyEngineVersion indicates an expected call of RubyEngineVersion
+func (_mr *MockVersionsMockRecorder) RubyEngineVersion() *gomock.Call {
+	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "RubyEngineVersion", reflect.TypeOf((*MockVersions)(nil).RubyEngineVersion))
+}
+
 // HasGemVersion mocks base method
 func (_m *MockVersions) HasGemVersion(gem string, constraint string) (bool, error) {
 	ret := _m.ctrl.Call(_m, "HasGemVersion", gem, constraint)

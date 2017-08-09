@@ -2,6 +2,7 @@ package supply_test
 
 import (
 	"bytes"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -79,8 +80,9 @@ var _ = Describe("Supply", func() {
 		Describe("SecretKeyBase", func() {
 			Context("Rails >= 4.1", func() {
 				BeforeEach(func() {
+					mockVersions.EXPECT().RubyEngineVersion().Return("2.3.19", nil)
 					mockVersions.EXPECT().HasGemVersion("rails", ">=4.1.0.beta1").Return(true, nil)
-					mockCommand.EXPECT().Output(buildDir, "rake", "secret").Return("abcdef", nil)
+					mockCommand.EXPECT().Output(buildDir, "bundle", "exec", "rake", "secret").Return("abcdef", nil)
 				})
 				It("writes default SECRET_KEY_BASE to profile.d", func() {
 					Expect(supplier.WriteProfileD()).To(Succeed())
@@ -91,6 +93,7 @@ var _ = Describe("Supply", func() {
 			})
 			Context("NOT Rails >= 4.1", func() {
 				BeforeEach(func() {
+					mockVersions.EXPECT().RubyEngineVersion().Return("2.3.19", nil)
 					mockVersions.EXPECT().HasGemVersion("rails", ">=4.1.0.beta1").Return(false, nil)
 				})
 				It("does not set default SECRET_KEY_BASE in profile.d", func() {
@@ -104,6 +107,7 @@ var _ = Describe("Supply", func() {
 
 		Describe("Default Rails ENVS", func() {
 			BeforeEach(func() {
+				mockVersions.EXPECT().RubyEngineVersion().Return("2.3.19", nil)
 				mockVersions.EXPECT().HasGemVersion("rails", ">=4.1.0.beta1").Return(false, nil)
 			})
 
@@ -126,6 +130,59 @@ var _ = Describe("Supply", func() {
 				contents, err := ioutil.ReadFile(filepath.Join(depsDir, depsIdx, "profile.d", "ruby.sh"))
 				Expect(err).ToNot(HaveOccurred())
 				Expect(string(contents)).To(ContainSubstring("export RAILS_LOG_TO_STDOUT=${RAILS_LOG_TO_STDOUT:-enabled}"))
+			})
+
+			It("writes default GEM_PATH to profile.d", func() {
+				Expect(supplier.WriteProfileD()).To(Succeed())
+				contents, err := ioutil.ReadFile(filepath.Join(depsDir, depsIdx, "profile.d", "ruby.sh"))
+				Expect(err).ToNot(HaveOccurred())
+				Expect(string(contents)).To(ContainSubstring("export GEM_PATH=${GEM_PATH:-GEM_PATH=$DEPS_DIR/9/vendor_bundle/ruby/2.3.19:$DEPS_DIR/9/gem_home:$DEPS_DIR/9/bundler}"))
+			})
+		})
+
+		Describe("InstallYarn", func() {
+			Context("app has yarn.lock file", func() {
+				BeforeEach(func() {
+					Expect(ioutil.WriteFile(filepath.Join(buildDir, "yarn.lock"), []byte("contents"), 0644)).To(Succeed())
+				})
+				It("installs yarn", func() {
+					mockManifest.EXPECT().InstallOnlyVersion("yarn", gomock.Any()).Do(func(_, tempDir string) error {
+						Expect(os.MkdirAll(filepath.Join(tempDir, "dist", "bin"), 0755)).To(Succeed())
+						Expect(ioutil.WriteFile(filepath.Join(tempDir, "dist", "bin", "yarn"), []byte("contents"), 0644)).To(Succeed())
+						return nil
+					})
+					Expect(supplier.InstallYarn()).To(Succeed())
+
+					Expect(filepath.Join(depsDir, depsIdx, "bin", "yarn")).To(BeAnExistingFile())
+					data, err := ioutil.ReadFile(filepath.Join(depsDir, depsIdx, "bin", "yarn"))
+					Expect(err).ToNot(HaveOccurred())
+					Expect(string(data)).To(Equal("contents"))
+				})
+			})
+			Context("app does not have a yarn.lock file", func() {
+				It("does NOT install yarn", func() {
+					Expect(supplier.InstallYarn()).To(Succeed())
+					Expect(filepath.Join(depsDir, depsIdx, "bin", "yarn")).ToNot(BeAnExistingFile())
+				})
+			})
+		})
+
+		Describe("HasNode", func() {
+			Context("node is already installed", func() {
+				BeforeEach(func() {
+					mockCommand.EXPECT().Output(buildDir, "node", "--version").Return("v8.2.1", nil)
+				})
+				It("returns true", func() {
+					Expect(supplier.HasNode()).To(BeTrue())
+				})
+			})
+			Context("node is not already installed", func() {
+				BeforeEach(func() {
+					mockCommand.EXPECT().Output(buildDir, "node", "--version").Return("", fmt.Errorf("could not find node"))
+				})
+				It("returns false", func() {
+					Expect(supplier.HasNode()).To(BeFalse())
+				})
 			})
 		})
 	})
