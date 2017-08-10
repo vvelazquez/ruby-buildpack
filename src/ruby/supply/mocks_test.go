@@ -8,6 +8,7 @@ import (
 	gomock "github.com/golang/mock/gomock"
 	io "io"
 	reflect "reflect"
+	cache "ruby/cache"
 )
 
 // MockCommand is a mock of Command interface
@@ -177,16 +178,21 @@ func (_mr *MockVersionsMockRecorder) RubyEngineVersion() *gomock.Call {
 }
 
 // HasGemVersion mocks base method
-func (_m *MockVersions) HasGemVersion(gem string, constraint string) (bool, error) {
-	ret := _m.ctrl.Call(_m, "HasGemVersion", gem, constraint)
+func (_m *MockVersions) HasGemVersion(gem string, constraints ...string) (bool, error) {
+	_s := []interface{}{gem}
+	for _, _x := range constraints {
+		_s = append(_s, _x)
+	}
+	ret := _m.ctrl.Call(_m, "HasGemVersion", _s...)
 	ret0, _ := ret[0].(bool)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // HasGemVersion indicates an expected call of HasGemVersion
-func (_mr *MockVersionsMockRecorder) HasGemVersion(arg0, arg1 interface{}) *gomock.Call {
-	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "HasGemVersion", reflect.TypeOf((*MockVersions)(nil).HasGemVersion), arg0, arg1)
+func (_mr *MockVersionsMockRecorder) HasGemVersion(arg0 interface{}, arg1 ...interface{}) *gomock.Call {
+	_s := append([]interface{}{arg0}, arg1...)
+	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "HasGemVersion", reflect.TypeOf((*MockVersions)(nil).HasGemVersion), _s...)
 }
 
 // MockStager is a mock of Stager interface
@@ -294,4 +300,63 @@ func (_m *MockStager) SetStagingEnvironment() error {
 // SetStagingEnvironment indicates an expected call of SetStagingEnvironment
 func (_mr *MockStagerMockRecorder) SetStagingEnvironment() *gomock.Call {
 	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "SetStagingEnvironment", reflect.TypeOf((*MockStager)(nil).SetStagingEnvironment))
+}
+
+// MockCache is a mock of Cache interface
+type MockCache struct {
+	ctrl     *gomock.Controller
+	recorder *MockCacheMockRecorder
+}
+
+// MockCacheMockRecorder is the mock recorder for MockCache
+type MockCacheMockRecorder struct {
+	mock *MockCache
+}
+
+// NewMockCache creates a new mock instance
+func NewMockCache(ctrl *gomock.Controller) *MockCache {
+	mock := &MockCache{ctrl: ctrl}
+	mock.recorder = &MockCacheMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (_m *MockCache) EXPECT() *MockCacheMockRecorder {
+	return _m.recorder
+}
+
+// Metadata mocks base method
+func (_m *MockCache) Metadata() *cache.Metadata {
+	ret := _m.ctrl.Call(_m, "Metadata")
+	ret0, _ := ret[0].(*cache.Metadata)
+	return ret0
+}
+
+// Metadata indicates an expected call of Metadata
+func (_mr *MockCacheMockRecorder) Metadata() *gomock.Call {
+	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "Metadata", reflect.TypeOf((*MockCache)(nil).Metadata))
+}
+
+// Restore mocks base method
+func (_m *MockCache) Restore() error {
+	ret := _m.ctrl.Call(_m, "Restore")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Restore indicates an expected call of Restore
+func (_mr *MockCacheMockRecorder) Restore() *gomock.Call {
+	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "Restore", reflect.TypeOf((*MockCache)(nil).Restore))
+}
+
+// Save mocks base method
+func (_m *MockCache) Save() error {
+	ret := _m.ctrl.Call(_m, "Save")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Save indicates an expected call of Save
+func (_mr *MockCacheMockRecorder) Save() *gomock.Call {
+	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "Save", reflect.TypeOf((*MockCache)(nil).Save))
 }

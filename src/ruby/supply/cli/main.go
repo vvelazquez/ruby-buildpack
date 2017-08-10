@@ -2,11 +2,10 @@ package main
 
 import (
 
-	// "ruby/cache"
 	// _ "ruby/hooks"
-	// "ruby/npm"
 	"os"
 	"path/filepath"
+	"ruby/cache"
 	"ruby/supply"
 	"ruby/versions"
 	"time"
@@ -51,11 +50,18 @@ func main() {
 		os.Exit(14)
 	}
 
+	cacher, err := cache.New(stager, libbuildpack.NewYAML())
+	if err != nil {
+		logger.Error("Unable to create cacher: %s", err.Error())
+		os.Exit(14)
+	}
+
 	s := supply.Supplier{
 		Stager:   stager,
 		Manifest: manifest,
 		Log:      logger,
 		Versions: versions.New(stager.BuildDir(), manifest),
+		Cache:    cacher,
 		Command:  &libbuildpack.Command{},
 	}
 

@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"ruby/cache"
 	"strings"
 
 	"github.com/cloudfoundry/libbuildpack"
@@ -26,7 +27,7 @@ type Manifest interface {
 type Versions interface {
 	Version() (string, error)
 	RubyEngineVersion() (string, error)
-	HasGemVersion(gem, constraint string) (bool, error)
+	HasGemVersion(gem string, constraints ...string) (bool, error)
 }
 
 type Stager interface {
@@ -39,16 +40,28 @@ type Stager interface {
 	SetStagingEnvironment() error
 }
 
+type Cache interface {
+	Metadata() *cache.Metadata
+	Restore() error
+	Save() error
+}
+
 type Supplier struct {
 	Stager   Stager
 	Manifest Manifest
 	Log      *libbuildpack.Logger
 	Versions Versions
+	Cache    Cache
 	Command  Command
 }
 
 func Run(s *Supplier) error {
-	f.Log.BeginStep("Supplying Ruby")
+	s.Log.BeginStep("Supplying Ruby")
+
+	if err := s.Cache.Restore(); err != nil {
+		s.Log.Error("Unable to restore cache: %s", err.Error())
+		return err
+	}
 
 	if err := s.CreateDefaultEnv(); err != nil {
 		s.Log.Error("Unable to setup default environment: %s", err.Error())
@@ -90,6 +103,11 @@ func Run(s *Supplier) error {
 
 	if err := s.InstallGems(); err != nil {
 		s.Log.Error("Unable to install gems: %s", err.Error())
+		return err
+	}
+
+	if err := s.Cache.Save(); err != nil {
+		s.Log.Error("Unable to save cache: %s", err.Error())
 		return err
 	}
 
