@@ -1,11 +1,14 @@
 package cache_test
 
 import (
+	"bytes"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"ruby/cache"
 
+	"github.com/cloudfoundry/libbuildpack"
+	"github.com/cloudfoundry/libbuildpack/ansicleaner"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -20,6 +23,8 @@ var _ = Describe("Cache", func() {
 		cacheDir   string
 		depsDir    string
 		depsIdx    string
+		logger     *libbuildpack.Logger
+		buffer     *bytes.Buffer
 		mockCtrl   *gomock.Controller
 		mockYaml   *MockYAML
 		mockStager *MockStager
@@ -37,6 +42,9 @@ var _ = Describe("Cache", func() {
 
 		depsIdx = "23"
 		Expect(os.MkdirAll(filepath.Join(depsDir, depsIdx), 0755)).To(Succeed())
+
+		buffer = new(bytes.Buffer)
+		logger = libbuildpack.NewLogger(ansicleaner.New(buffer))
 
 		mockCtrl = gomock.NewController(GinkgoT())
 		mockYaml = NewMockYAML(mockCtrl)
@@ -64,7 +72,7 @@ var _ = Describe("Cache", func() {
 			})
 
 			It("loads the metadata", func() {
-				c, err := cache.New(mockStager, mockYaml)
+				c, err := cache.New(mockStager, logger, mockYaml)
 				Expect(err).ToNot(HaveOccurred())
 
 				Expect(c.Metadata().Stack).To(Equal("cflinuxfs9"))
@@ -78,7 +86,7 @@ var _ = Describe("Cache", func() {
 			})
 
 			It("initializes the metadata", func() {
-				c, err := cache.New(mockStager, mockYaml)
+				c, err := cache.New(mockStager, logger, mockYaml)
 				Expect(err).ToNot(HaveOccurred())
 
 				Expect(c.Metadata().Stack).To(Equal(""))
@@ -93,7 +101,7 @@ var _ = Describe("Cache", func() {
 			Expect(os.MkdirAll(filepath.Join(depsDir, depsIdx, "vendor_bundler", "adir", "bdir"), 0755)).To(Succeed())
 			mockYaml.EXPECT().Load(filepath.Join(cacheDir, "metadata.yml"), gomock.Any()).Return(os.ErrNotExist)
 			var err error
-			c, err = cache.New(mockStager, mockYaml)
+			c, err = cache.New(mockStager, logger, mockYaml)
 			Expect(err).ToNot(HaveOccurred())
 		})
 
@@ -122,7 +130,7 @@ var _ = Describe("Cache", func() {
 				return nil
 			})
 			var err error
-			c, err = cache.New(mockStager, mockYaml)
+			c, err = cache.New(mockStager, logger, mockYaml)
 			Expect(err).ToNot(HaveOccurred())
 		})
 

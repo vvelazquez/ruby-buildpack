@@ -50,7 +50,7 @@ func main() {
 		os.Exit(14)
 	}
 
-	cacher, err := cache.New(stager, libbuildpack.NewYAML())
+	cacher, err := cache.New(stager, logger, libbuildpack.NewYAML())
 	if err != nil {
 		logger.Error("Unable to create cacher: %s", err.Error())
 		os.Exit(14)
