@@ -98,7 +98,7 @@ var _ = Describe("Cache", func() {
 	Describe("Save", func() {
 		var c *cache.Cache
 		BeforeEach(func() {
-			Expect(os.MkdirAll(filepath.Join(depsDir, depsIdx, "vendor_bundler", "adir", "bdir"), 0755)).To(Succeed())
+			Expect(os.MkdirAll(filepath.Join(depsDir, depsIdx, "vendor_bundle", "adir", "bdir"), 0755)).To(Succeed())
 			mockYaml.EXPECT().Load(filepath.Join(cacheDir, "metadata.yml"), gomock.Any()).Return(os.ErrNotExist)
 			var err error
 			c, err = cache.New(mockStager, logger, mockYaml)
@@ -109,7 +109,7 @@ var _ = Describe("Cache", func() {
 			mockYaml.EXPECT().Write(filepath.Join(cacheDir, "metadata.yml"), gomock.Any()).AnyTimes().Return(nil)
 			Expect(c.Save()).To(Succeed())
 
-			Expect(filepath.Join(cacheDir, "vendor_bundler", "adir", "bdir")).To(BeADirectory())
+			Expect(filepath.Join(cacheDir, "vendor_bundle", "adir", "bdir")).To(BeADirectory())
 		})
 
 		It("Stores metadata", func() {
@@ -122,7 +122,7 @@ var _ = Describe("Cache", func() {
 	Describe("Restore", func() {
 		var c *cache.Cache
 		BeforeEach(func() {
-			Expect(os.MkdirAll(filepath.Join(cacheDir, "vendor_bundler", "adir", "bdir"), 0755)).To(Succeed())
+			Expect(os.MkdirAll(filepath.Join(cacheDir, "vendor_bundle", "adir", "bdir"), 0755)).To(Succeed())
 			mockYaml.EXPECT().Load(filepath.Join(cacheDir, "metadata.yml"), gomock.Any()).Do(func(_ string, val interface{}) error {
 				metadata := val.(*cache.Metadata)
 				metadata.Stack = "cflinuxfs8"
@@ -138,11 +138,11 @@ var _ = Describe("Cache", func() {
 			BeforeEach(func() {
 				os.Setenv("CF_STACK", "cflinuxfs8")
 			})
-			It("restores vendor_bundler directory", func() {
+			It("restores vendor_bundle directory", func() {
 				Expect(c.Restore()).To(Succeed())
 
-				Expect(filepath.Join(depsDir, depsIdx, "vendor_bundler", "adir", "bdir")).To(BeADirectory())
-				Expect(filepath.Join(cacheDir, "vendor_bundler")).ToNot(BeADirectory())
+				Expect(filepath.Join(depsDir, depsIdx, "vendor_bundle", "adir", "bdir")).To(BeADirectory())
+				Expect(filepath.Join(cacheDir, "vendor_bundle")).ToNot(BeADirectory())
 			})
 		})
 
@@ -150,11 +150,11 @@ var _ = Describe("Cache", func() {
 			BeforeEach(func() {
 				os.Setenv("CF_STACK", "cflinuxfs9")
 			})
-			It("does not restore vendor_bundler directory", func() {
+			It("does not restore vendor_bundle directory", func() {
 				Expect(c.Restore()).To(Succeed())
 
-				Expect(filepath.Join(depsDir, depsIdx, "vendor_bundler")).ToNot(BeADirectory())
-				Expect(filepath.Join(cacheDir, "vendor_bundler")).ToNot(BeADirectory())
+				Expect(filepath.Join(depsDir, depsIdx, "vendor_bundle")).ToNot(BeADirectory())
+				Expect(filepath.Join(cacheDir, "vendor_bundle")).ToNot(BeADirectory())
 			})
 		})
 	})

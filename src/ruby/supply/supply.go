@@ -106,6 +106,7 @@ func Run(s *Supplier) error {
 		return err
 	}
 
+	s.Cache.Metadata().Stack = os.Getenv("CF_STACK")
 	if err := s.Cache.Save(); err != nil {
 		s.Log.Error("Unable to save cache: %s", err.Error())
 		return err

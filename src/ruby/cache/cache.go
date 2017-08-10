@@ -59,16 +59,22 @@ func (c *Cache) Metadata() *Metadata {
 
 func (c *Cache) Restore() error {
 	if c.metadata.Stack == os.Getenv("CF_STACK") {
-		return os.Rename(filepath.Join(c.cacheDir, "vendor_bundler"), filepath.Join(c.depDir, "vendor_bundler"))
+		c.log.BeginStep("Restoring vendor_bundle from cache")
+		return os.Rename(filepath.Join(c.cacheDir, "vendor_bundle"), filepath.Join(c.depDir, "vendor_bundle"))
 	}
-	return os.RemoveAll(filepath.Join(c.cacheDir, "vendor_bundler"))
+	if c.metadata.Stack != "" {
+		c.log.BeginStep("Skipping restoring vendor_bundle from cache, stack changed from %s to %s", c.metadata.Stack, os.Getenv("CF_STACK"))
+	}
+	return os.RemoveAll(filepath.Join(c.cacheDir, "vendor_bundle"))
 }
 
 func (c *Cache) Save() error {
-	cmd := exec.Command("cp", "-al", filepath.Join(c.depDir, "vendor_bundler"), filepath.Join(c.cacheDir, "vendor_bundler"))
+	c.log.BeginStep("Saving vendor_bundle to cache")
+
+	cmd := exec.Command("cp", "-al", filepath.Join(c.depDir, "vendor_bundle"), filepath.Join(c.cacheDir, "vendor_bundle"))
 	if output, err := cmd.CombinedOutput(); err != nil {
 		c.log.Error(string(output))
-		return fmt.Errorf("Could not copy vendor_bundler: %v", err)
+		return fmt.Errorf("Could not copy vendor_bundle: %v", err)
 	}
 
 	if err := c.yaml.Write(c.metadata_yml(), c.metadata); err != nil {
