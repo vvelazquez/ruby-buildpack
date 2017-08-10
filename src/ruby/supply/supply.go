@@ -95,7 +95,10 @@ func Run(s *Supplier) error {
 			s.Log.Error("Unable to determine jruby version: %s", err.Error())
 			return err
 		}
-		s.InstallJVM()
+		if err = s.InstallJVM(); err != nil {
+			s.Log.Error("Unable to install JVM: %s", err.Error())
+			return err
+		}
 	} else {
 		s.Log.Error("Sorry, we do not support engine: %s", engine)
 		return fmt.Errorf("Sorry, we do not support engine: %s", engine)
@@ -107,6 +110,7 @@ func Run(s *Supplier) error {
 	}
 
 	if !s.HasNode() { // TODO If needs node (gem execjs or gem webpacker)
+		// TODO choose 4.x vs 6.x based upon rails version
 		if err := s.InstallNode("6.x"); err != nil {
 			s.Log.Error("Unable to install node: %s", err.Error())
 			return err
@@ -262,7 +266,7 @@ func (s *Supplier) InstallJVM() error {
 	}
 
 	jvmInstallDir := filepath.Join(s.Stager.DepDir(), "jvm")
-	if err := s.Manifest.InstallOnlyVersion("openjdk", jvmInstallDir); err != nil {
+	if err := s.Manifest.InstallOnlyVersion("openjdk1.8-latest", jvmInstallDir); err != nil {
 		return err
 	}
 	if err := s.Stager.LinkDirectoryInDepDir(filepath.Join(jvmInstallDir, "bin"), "bin"); err != nil {

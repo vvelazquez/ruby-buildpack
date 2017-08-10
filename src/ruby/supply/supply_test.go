@@ -98,7 +98,7 @@ var _ = Describe("Supply", func() {
 
 		Context("app/.jdk does not exist", func() {
 			BeforeEach(func() {
-				mockManifest.EXPECT().InstallOnlyVersion("openjdk", gomock.Any()).Do(func(_, path string) error {
+				mockManifest.EXPECT().InstallOnlyVersion("openjdk1.8-latest", gomock.Any()).Do(func(_, path string) error {
 					Expect(os.MkdirAll(filepath.Join(path, "bin"), 0755)).To(Succeed())
 					Expect(ioutil.WriteFile(filepath.Join(path, "bin", "java"), []byte("java.exe"), 0755)).To(Succeed())
 					return nil
