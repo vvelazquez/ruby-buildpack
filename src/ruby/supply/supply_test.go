@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"ruby/cache"
 	"ruby/supply"
 
 	"github.com/cloudfoundry/libbuildpack"
@@ -31,6 +32,7 @@ var _ = Describe("Supply", func() {
 		mockManifest *MockManifest
 		mockVersions *MockVersions
 		mockCommand  *MockCommand
+		mockCache    *MockCache
 	)
 
 	BeforeEach(func() {
@@ -51,6 +53,7 @@ var _ = Describe("Supply", func() {
 		mockManifest = NewMockManifest(mockCtrl)
 		mockVersions = NewMockVersions(mockCtrl)
 		mockCommand = NewMockCommand(mockCtrl)
+		mockCache = NewMockCache(mockCtrl)
 
 		args := []string{buildDir, "", depsDir, depsIdx}
 		stager := libbuildpack.NewStager(args, logger, &libbuildpack.Manifest{})
@@ -60,6 +63,7 @@ var _ = Describe("Supply", func() {
 			Manifest: mockManifest,
 			Log:      logger,
 			Versions: mockVersions,
+			Cache:    mockCache,
 			Command:  mockCommand,
 		}
 	})
@@ -80,18 +84,90 @@ var _ = Describe("Supply", func() {
 	PIt("InstallGems", func() {})
 
 	Describe("CreateDefaultEnv", func() {
+		AfterEach(func() {
+			os.Unsetenv("RAILS_ENV")
+			os.Unsetenv("RACK_ENV")
+		})
+
+		It("Sets RAILS_ENV", func() {
+			Expect(supplier.CreateDefaultEnv()).To(Succeed())
+			Expect(os.Getenv("RAILS_ENV")).To(Equal("production"))
+		})
+		It("Sets RACK_ENV", func() {
+			Expect(supplier.CreateDefaultEnv()).To(Succeed())
+			Expect(os.Getenv("RACK_ENV")).To(Equal("production"))
+		})
+		It("Sets RAILS_ENV in env directory", func() {
+			Expect(supplier.CreateDefaultEnv()).To(Succeed())
+			data, err := ioutil.ReadFile(filepath.Join(depsDir, depsIdx, "env", "RAILS_ENV"))
+			Expect(err).ToNot(HaveOccurred())
+			Expect(string(data)).To(Equal("production"))
+		})
+		It("Sets RACK_ENV in env directory", func() {
+			Expect(supplier.CreateDefaultEnv()).To(Succeed())
+			data, err := ioutil.ReadFile(filepath.Join(depsDir, depsIdx, "env", "RACK_ENV"))
+			Expect(err).ToNot(HaveOccurred())
+			Expect(string(data)).To(Equal("production"))
+		})
+
+		Context("RAILS_ENV is set", func() {
+			BeforeEach(func() { os.Setenv("RAILS_ENV", "test") })
+
+			It("does not set RAILS_ENV", func() {
+				Expect(supplier.CreateDefaultEnv()).To(Succeed())
+				Expect(os.Getenv("RAILS_ENV")).To(Equal("test"))
+			})
+			It("does not set RAILS_ENV in env directory", func() {
+				Expect(supplier.CreateDefaultEnv()).To(Succeed())
+				Expect(filepath.Join(depsDir, depsIdx, "env", "RAILS_ENV")).ToNot(BeAnExistingFile())
+			})
+		})
+
+		Context("RACK_ENV is set", func() {
+			BeforeEach(func() { os.Setenv("RACK_ENV", "test") })
+
+			It("does not set RACK_ENV", func() {
+				Expect(supplier.CreateDefaultEnv()).To(Succeed())
+				Expect(os.Getenv("RACK_ENV")).To(Equal("test"))
+			})
+			It("does not set RACK_ENV in env directory", func() {
+				Expect(supplier.CreateDefaultEnv()).To(Succeed())
+				Expect(filepath.Join(depsDir, depsIdx, "env", "RACK_ENV")).ToNot(BeAnExistingFile())
+			})
+		})
+	})
+
+	Describe("WriteProfileD", func() {
 		Describe("SecretKeyBase", func() {
 			Context("Rails >= 4.1", func() {
 				BeforeEach(func() {
 					mockVersions.EXPECT().RubyEngineVersion().Return("2.3.19", nil)
 					mockVersions.EXPECT().HasGemVersion("rails", ">=4.1.0.beta1").Return(true, nil)
-					mockCommand.EXPECT().Output(buildDir, "bundle", "exec", "rake", "secret").Return("abcdef", nil)
 				})
-				It("writes default SECRET_KEY_BASE to profile.d", func() {
-					Expect(supplier.WriteProfileD()).To(Succeed())
-					contents, err := ioutil.ReadFile(filepath.Join(depsDir, depsIdx, "profile.d", "ruby.sh"))
-					Expect(err).ToNot(HaveOccurred())
-					Expect(string(contents)).To(ContainSubstring("export SECRET_KEY_BASE=${SECRET_KEY_BASE:-abcdef}"))
+
+				Context("SECRET_KEY_BASE is cached", func() {
+					BeforeEach(func() {
+						mockCache.EXPECT().Metadata().Return(&cache.Metadata{SecretKeyBase: "foobar"})
+					})
+					It("writes the cached SECRET_KEY_BASE to profile.d", func() {
+						Expect(supplier.WriteProfileD()).To(Succeed())
+						contents, err := ioutil.ReadFile(filepath.Join(depsDir, depsIdx, "profile.d", "ruby.sh"))
+						Expect(err).ToNot(HaveOccurred())
+						Expect(string(contents)).To(ContainSubstring("export SECRET_KEY_BASE=${SECRET_KEY_BASE:-foobar}"))
+					})
+				})
+
+				Context("SECRET_KEY_BASE is not cached", func() {
+					BeforeEach(func() {
+						mockCache.EXPECT().Metadata().Return(&cache.Metadata{})
+						mockCommand.EXPECT().Output(buildDir, "bundle", "exec", "rake", "secret").Return("abcdef", nil)
+					})
+					It("writes default SECRET_KEY_BASE to profile.d", func() {
+						Expect(supplier.WriteProfileD()).To(Succeed())
+						contents, err := ioutil.ReadFile(filepath.Join(depsDir, depsIdx, "profile.d", "ruby.sh"))
+						Expect(err).ToNot(HaveOccurred())
+						Expect(string(contents)).To(ContainSubstring("export SECRET_KEY_BASE=${SECRET_KEY_BASE:-abcdef}"))
+					})
 				})
 			})
 			Context("NOT Rails >= 4.1", func() {
@@ -142,82 +218,82 @@ var _ = Describe("Supply", func() {
 				Expect(string(contents)).To(ContainSubstring("export GEM_PATH=${GEM_PATH:-GEM_PATH=$DEPS_DIR/9/vendor_bundle/ruby/2.3.19:$DEPS_DIR/9/gem_home:$DEPS_DIR/9/bundler}"))
 			})
 		})
+	})
 
-		Describe("InstallYarn", func() {
-			Context("app has yarn.lock file", func() {
-				BeforeEach(func() {
-					Expect(ioutil.WriteFile(filepath.Join(buildDir, "yarn.lock"), []byte("contents"), 0644)).To(Succeed())
-				})
-				It("installs yarn", func() {
-					mockManifest.EXPECT().InstallOnlyVersion("yarn", gomock.Any()).Do(func(_, tempDir string) error {
-						Expect(os.MkdirAll(filepath.Join(tempDir, "dist", "bin"), 0755)).To(Succeed())
-						Expect(ioutil.WriteFile(filepath.Join(tempDir, "dist", "bin", "yarn"), []byte("contents"), 0644)).To(Succeed())
-						return nil
-					})
-					Expect(supplier.InstallYarn()).To(Succeed())
-
-					Expect(filepath.Join(depsDir, depsIdx, "bin", "yarn")).To(BeAnExistingFile())
-					data, err := ioutil.ReadFile(filepath.Join(depsDir, depsIdx, "bin", "yarn"))
-					Expect(err).ToNot(HaveOccurred())
-					Expect(string(data)).To(Equal("contents"))
-				})
+	Describe("InstallYarn", func() {
+		Context("app has yarn.lock file", func() {
+			BeforeEach(func() {
+				Expect(ioutil.WriteFile(filepath.Join(buildDir, "yarn.lock"), []byte("contents"), 0644)).To(Succeed())
 			})
-			Context("app does not have a yarn.lock file", func() {
-				It("does NOT install yarn", func() {
-					Expect(supplier.InstallYarn()).To(Succeed())
-					Expect(filepath.Join(depsDir, depsIdx, "bin", "yarn")).ToNot(BeAnExistingFile())
+			It("installs yarn", func() {
+				mockManifest.EXPECT().InstallOnlyVersion("yarn", gomock.Any()).Do(func(_, tempDir string) error {
+					Expect(os.MkdirAll(filepath.Join(tempDir, "dist", "bin"), 0755)).To(Succeed())
+					Expect(ioutil.WriteFile(filepath.Join(tempDir, "dist", "bin", "yarn"), []byte("contents"), 0644)).To(Succeed())
+					return nil
 				})
+				Expect(supplier.InstallYarn()).To(Succeed())
+
+				Expect(filepath.Join(depsDir, depsIdx, "bin", "yarn")).To(BeAnExistingFile())
+				data, err := ioutil.ReadFile(filepath.Join(depsDir, depsIdx, "bin", "yarn"))
+				Expect(err).ToNot(HaveOccurred())
+				Expect(string(data)).To(Equal("contents"))
+			})
+		})
+		Context("app does not have a yarn.lock file", func() {
+			It("does NOT install yarn", func() {
+				Expect(supplier.InstallYarn()).To(Succeed())
+				Expect(filepath.Join(depsDir, depsIdx, "bin", "yarn")).ToNot(BeAnExistingFile())
+			})
+		})
+	})
+
+	Describe("InstallYarnDependencies", func() {
+		Context("app has yarn.lock nd bin/yarn files", func() {
+			BeforeEach(func() {
+				Expect(ioutil.WriteFile(filepath.Join(buildDir, "yarn.lock"), []byte("contents"), 0644)).To(Succeed())
+				Expect(os.MkdirAll(filepath.Join(buildDir, "bin"), 0755)).To(Succeed())
+				Expect(ioutil.WriteFile(filepath.Join(buildDir, "bin", "yarn"), []byte("executable"), 0755)).To(Succeed())
+			})
+			It("runs bin/yarn install", func() {
+				mockCommand.EXPECT().Execute(buildDir, gomock.Any(), gomock.Any(), "bin/yarn", "install").Return(nil)
+				Expect(supplier.InstallYarnDependencies()).To(Succeed())
+			})
+		})
+		Context("app does not have a yarn.lock file", func() {
+			BeforeEach(func() {
+				Expect(ioutil.WriteFile(filepath.Join(buildDir, "yarn.lock"), []byte("contents"), 0644)).To(Succeed())
+			})
+			It("does NOT run yarn install", func() {
+				Expect(supplier.InstallYarnDependencies()).To(Succeed())
 			})
 		})
 
-		Describe("InstallYarnDependencies", func() {
-			Context("app has yarn.lock nd bin/yarn files", func() {
-				BeforeEach(func() {
-					Expect(ioutil.WriteFile(filepath.Join(buildDir, "yarn.lock"), []byte("contents"), 0644)).To(Succeed())
-					Expect(os.MkdirAll(filepath.Join(buildDir, "bin"), 0755)).To(Succeed())
-					Expect(ioutil.WriteFile(filepath.Join(buildDir, "bin", "yarn"), []byte("executable"), 0755)).To(Succeed())
-				})
-				It("runs bin/yarn install", func() {
-					mockCommand.EXPECT().Execute(buildDir, gomock.Any(), gomock.Any(), "bin/yarn", "install").Return(nil)
-					Expect(supplier.InstallYarnDependencies()).To(Succeed())
-				})
+		Context("app does not have a bin/yarn file", func() {
+			BeforeEach(func() {
+				Expect(os.MkdirAll(filepath.Join(buildDir, "bin"), 0755)).To(Succeed())
+				Expect(ioutil.WriteFile(filepath.Join(buildDir, "bin", "yarn"), []byte("executable"), 0755)).To(Succeed())
 			})
-			Context("app does not have a yarn.lock file", func() {
-				BeforeEach(func() {
-					Expect(ioutil.WriteFile(filepath.Join(buildDir, "yarn.lock"), []byte("contents"), 0644)).To(Succeed())
-				})
-				It("does NOT run yarn install", func() {
-					Expect(supplier.InstallYarnDependencies()).To(Succeed())
-				})
-			})
-
-			Context("app does not have a bin/yarn file", func() {
-				BeforeEach(func() {
-					Expect(os.MkdirAll(filepath.Join(buildDir, "bin"), 0755)).To(Succeed())
-					Expect(ioutil.WriteFile(filepath.Join(buildDir, "bin", "yarn"), []byte("executable"), 0755)).To(Succeed())
-				})
-				It("does NOT run yarn install", func() {
-					Expect(supplier.InstallYarnDependencies()).To(Succeed())
-				})
+			It("does NOT run yarn install", func() {
+				Expect(supplier.InstallYarnDependencies()).To(Succeed())
 			})
 		})
+	})
 
-		Describe("HasNode", func() {
-			Context("node is already installed", func() {
-				BeforeEach(func() {
-					mockCommand.EXPECT().Output(buildDir, "node", "--version").Return("v8.2.1", nil)
-				})
-				It("returns true", func() {
-					Expect(supplier.HasNode()).To(BeTrue())
-				})
+	Describe("HasNode", func() {
+		Context("node is already installed", func() {
+			BeforeEach(func() {
+				mockCommand.EXPECT().Output(buildDir, "node", "--version").Return("v8.2.1", nil)
 			})
-			Context("node is not already installed", func() {
-				BeforeEach(func() {
-					mockCommand.EXPECT().Output(buildDir, "node", "--version").Return("", fmt.Errorf("could not find node"))
-				})
-				It("returns false", func() {
-					Expect(supplier.HasNode()).To(BeFalse())
-				})
+			It("returns true", func() {
+				Expect(supplier.HasNode()).To(BeTrue())
+			})
+		})
+		Context("node is not already installed", func() {
+			BeforeEach(func() {
+				mockCommand.EXPECT().Output(buildDir, "node", "--version").Return("", fmt.Errorf("could not find node"))
+			})
+			It("returns false", func() {
+				Expect(supplier.HasNode()).To(BeFalse())
 			})
 		})
 	})

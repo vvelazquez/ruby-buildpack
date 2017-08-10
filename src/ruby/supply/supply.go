@@ -106,14 +106,14 @@ func Run(s *Supplier) error {
 		return err
 	}
 
-	s.Cache.Metadata().Stack = os.Getenv("CF_STACK")
-	if err := s.Cache.Save(); err != nil {
-		s.Log.Error("Unable to save cache: %s", err.Error())
+	if err := s.WriteProfileD(); err != nil {
+		s.Log.Error("Unable to write profile.d: %s", err.Error())
 		return err
 	}
 
-	if err := s.WriteProfileD(); err != nil {
-		s.Log.Error("Unable to write profile.d: %s", err.Error())
+	s.Cache.Metadata().Stack = os.Getenv("CF_STACK")
+	if err := s.Cache.Save(); err != nil {
+		s.Log.Error("Unable to save cache: %s", err.Error())
 		return err
 	}
 
@@ -350,11 +350,14 @@ bundle config PATH "$DEPS_DIR/%s/vendor_bundle"
 		return err
 	}
 	if hasRails41 {
-		secretKey, err := s.Command.Output(s.Stager.BuildDir(), "bundle", "exec", "rake", "secret")
-		if err != nil {
-			return fmt.Errorf("Running 'rake secret'", err)
+		metadata := s.Cache.Metadata()
+		if metadata.SecretKeyBase == "" {
+			metadata.SecretKeyBase, err = s.Command.Output(s.Stager.BuildDir(), "bundle", "exec", "rake", "secret")
+			if err != nil {
+				return fmt.Errorf("Running 'rake secret'", err)
+			}
 		}
-		scriptContents += fmt.Sprintf("\nexport SECRET_KEY_BASE=${SECRET_KEY_BASE:-%s}\n", secretKey)
+		scriptContents += fmt.Sprintf("\nexport SECRET_KEY_BASE=${SECRET_KEY_BASE:-%s}\n", metadata.SecretKeyBase)
 	}
 
 	return s.Stager.WriteProfileD("ruby.sh", scriptContents)
