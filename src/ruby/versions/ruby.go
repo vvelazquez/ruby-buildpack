@@ -35,6 +35,22 @@ type output struct {
 	Output interface{} `json:"output"`
 }
 
+func (v *Versions) Engine() (string, error) {
+	gemfile := v.gemfile()
+	code := fmt.Sprintf(`
+		b = Bundler::Dsl.evaluate('%s', '%s.lock', {}).ruby_version
+	  return 'ruby' if !b
+		b.engine
+	`, filepath.Base(gemfile), filepath.Base(gemfile))
+
+	data, err := v.run(filepath.Dir(gemfile), code, []string{})
+	if err != nil {
+		return "", err
+	}
+
+	return data.(string), nil
+}
+
 func (v *Versions) Version() (string, error) {
 	versions := v.manifest.AllDependencyVersions("ruby")
 	gemfile := v.gemfile()
@@ -60,6 +76,23 @@ func (v *Versions) Version() (string, error) {
 		return dep.Version, err
 	}
 	return version, nil
+}
+
+func (v *Versions) JrubyVersion() (string, error) {
+	gemfile := v.gemfile()
+	code := fmt.Sprintf(`
+		b = Bundler::Dsl.evaluate('%s', '%s.lock', {}).ruby_version
+	  return '' if !b
+
+	  "ruby-#{b.versions_string(b.versions)}-jruby-#{b.versions_string(b.engine_versions)}"
+	`, filepath.Base(gemfile), filepath.Base(gemfile))
+
+	data, err := v.run(filepath.Dir(gemfile), code, []string{})
+	if err != nil {
+		return "", err
+	}
+
+	return data.(string), nil
 }
 
 func (v *Versions) RubyEngineVersion() (string, error) {

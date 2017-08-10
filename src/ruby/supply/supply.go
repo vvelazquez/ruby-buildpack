@@ -25,7 +25,9 @@ type Manifest interface {
 	InstallOnlyVersion(string, string) error
 }
 type Versions interface {
+	Engine() (string, error)
 	Version() (string, error)
+	JrubyVersion() (string, error)
 	RubyEngineVersion() (string, error)
 	HasGemVersion(gem string, constraints ...string) (bool, error)
 }
@@ -73,18 +75,38 @@ func Run(s *Supplier) error {
 		return err
 	}
 
-	rubyVersion, err := s.Versions.Version()
+	engine, err := s.Versions.Engine()
 	if err != nil {
-		s.Log.Error("Unable to determine ruby version: %s", err.Error())
+		s.Log.Error("Unable to determine ruby engine: %s", err.Error())
 		return err
 	}
 
-	if err := s.InstallRuby(rubyVersion); err != nil {
+	var rubyVersion string
+	if engine == "ruby" {
+		rubyVersion, err = s.Versions.Version()
+		if err != nil {
+			s.Log.Error("Unable to determine ruby version: %s", err.Error())
+			return err
+		}
+
+	} else if engine == "jruby" {
+		rubyVersion, err = s.Versions.JrubyVersion()
+		if err != nil {
+			s.Log.Error("Unable to determine jruby version: %s", err.Error())
+			return err
+		}
+		s.InstallJVM()
+	} else {
+		s.Log.Error("Sorry, we do not support engine: %s", engine)
+		return fmt.Errorf("Sorry, we do not support engine: %s", engine)
+	}
+
+	if err := s.InstallRuby(engine, rubyVersion); err != nil {
 		s.Log.Error("Unable to install ruby: %s", err.Error())
 		return err
 	}
 
-	if !s.HasNode() {
+	if !s.HasNode() { // TODO If needs node (gem execjs or gem webpacker)
 		if err := s.InstallNode("6.x"); err != nil {
 			s.Log.Error("Unable to install node: %s", err.Error())
 			return err
@@ -106,7 +128,7 @@ func Run(s *Supplier) error {
 		return err
 	}
 
-	if err := s.WriteProfileD(); err != nil {
+	if err := s.WriteProfileD(engine); err != nil {
 		s.Log.Error("Unable to write profile.d: %s", err.Error())
 		return err
 	}
@@ -231,10 +253,37 @@ func (s *Supplier) HasNode() bool {
 	return err == nil
 }
 
-func (s *Supplier) InstallRuby(version string) error {
+func (s *Supplier) InstallJVM() error {
+	if exists, err := libbuildpack.FileExists(filepath.Join(s.Stager.BuildDir(), ".jdk")); err != nil {
+		return err
+	} else if exists {
+		s.Log.Info("Using pre-installed JDK")
+		return nil
+	}
+
+	jvmInstallDir := filepath.Join(s.Stager.DepDir(), "jvm")
+	if err := s.Manifest.InstallOnlyVersion("openjdk", jvmInstallDir); err != nil {
+		return err
+	}
+	if err := s.Stager.LinkDirectoryInDepDir(filepath.Join(jvmInstallDir, "bin"), "bin"); err != nil {
+		return err
+	}
+
+	scriptContents := `
+if ! [[ "${JAVA_OPTS}" == *-Xmx* ]]; then
+  export JAVA_MEM=${JAVA_MEM:--Xmx${JVM_MAX_HEAP:-384}m}
+fi
+export JAVA_OPTS=${JAVA_OPTS:--Xss512k -XX:+UseCompressedOops -Dfile.encoding=UTF-8}
+export JRUBY_OPTS=${JRUBY_OPTS:--Xcompile.invokedynamic=false}
+`
+
+	return s.Stager.WriteProfileD("jruby.sh", scriptContents)
+}
+
+func (s *Supplier) InstallRuby(name, version string) error {
 	installDir := filepath.Join(s.Stager.DepDir(), "ruby")
 
-	if err := s.Manifest.InstallDependency(libbuildpack.Dependency{Name: "ruby", Version: version}, installDir); err != nil {
+	if err := s.Manifest.InstallDependency(libbuildpack.Dependency{Name: name, Version: version}, installDir); err != nil {
 		return err
 	}
 
@@ -244,7 +293,7 @@ func (s *Supplier) InstallRuby(version string) error {
 		return err
 	}
 	groups := strings.SplitN(string(rakeContent), "\n", 2)
-	groups[0] = "#!/usr/bin/env ruby"
+	groups[0] = fmt.Sprintf("#!/usr/bin/env %s", name)
 	if err := ioutil.WriteFile(rakePath, []byte(strings.Join(groups, "\n")), 0755); err != nil {
 		return err
 	}
@@ -322,7 +371,7 @@ func (s *Supplier) CreateDefaultEnv() error {
 	return nil
 }
 
-func (s *Supplier) WriteProfileD() error {
+func (s *Supplier) WriteProfileD(engine string) error {
 	s.Log.BeginStep("Creating runtime environment")
 
 	rubyEngineVersion, err := s.Versions.RubyEngineVersion()
@@ -339,11 +388,11 @@ export RAILS_SERVE_STATIC_FILES=${RAILS_SERVE_STATIC_FILES:-enabled}
 export RAILS_LOG_TO_STDOUT=${RAILS_LOG_TO_STDOUT:-enabled}
 
 export GEM_HOME=${GEM_HOME:-$DEPS_DIR/%s/gem_home}
-export GEM_PATH=${GEM_PATH:-GEM_PATH=$DEPS_DIR/%s/vendor_bundle/ruby/%s:$DEPS_DIR/%s/gem_home:$DEPS_DIR/%s/bundler}
+export GEM_PATH=${GEM_PATH:-GEM_PATH=$DEPS_DIR/%s/vendor_bundle/%s/%s:$DEPS_DIR/%s/gem_home:$DEPS_DIR/%s/bundler}
 
 ## TODO Is this the right plan?
 bundle config PATH "$DEPS_DIR/%s/vendor_bundle"
-		`, depsIdx, depsIdx, rubyEngineVersion, depsIdx, depsIdx, depsIdx)
+		`, depsIdx, depsIdx, engine, rubyEngineVersion, depsIdx, depsIdx, depsIdx)
 
 	hasRails41, err := s.Versions.HasGemVersion("rails", ">=4.1.0.beta1")
 	if err != nil {

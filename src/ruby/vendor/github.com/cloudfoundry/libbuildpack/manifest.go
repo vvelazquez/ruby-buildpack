@@ -222,7 +222,8 @@ func (m *Manifest) warnNewerPatch(dep Dependency) error {
 
 	v, err := semver.NewVersion(dep.Version)
 	if err != nil {
-		return err
+		// Ignore invalid versions, eg. ruby-2.3.3-jruby-9.1.12.0
+		return nil
 	}
 
 	constraint := fmt.Sprintf("%d.%d.x", v.Major(), v.Minor())
@@ -241,7 +242,8 @@ func (m *Manifest) warnNewerPatch(dep Dependency) error {
 func (m *Manifest) warnEndOfLife(dep Dependency) error {
 	v, err := semver.NewVersion(dep.Version)
 	if err != nil {
-		return err
+		// Ignore invalid versions, eg. ruby-2.3.3-jruby-9.1.12.0
+		return nil
 	}
 
 	for _, deprecation := range m.Deprecations {

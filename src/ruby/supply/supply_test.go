@@ -83,6 +83,43 @@ var _ = Describe("Supply", func() {
 	PIt("InstallRuby", func() {})
 	PIt("InstallGems", func() {})
 
+	Describe("InstallJVM", func() {
+		Context("app/.jdk exists", func() {
+			BeforeEach(func() {
+				Expect(os.Mkdir(filepath.Join(buildDir, ".jdk"), 0755)).To(Succeed())
+			})
+			It("skips jdk install", func() {
+				Expect(supplier.InstallJVM()).To(Succeed())
+
+				Expect(buffer.String()).To(ContainSubstring("Using pre-installed JDK"))
+				Expect(filepath.Join(depsDir, depsIdx, "jvm")).ToNot(BeADirectory())
+			})
+		})
+
+		Context("app/.jdk does not exist", func() {
+			BeforeEach(func() {
+				mockManifest.EXPECT().InstallOnlyVersion("openjdk", gomock.Any()).Do(func(_, path string) error {
+					Expect(os.MkdirAll(filepath.Join(path, "bin"), 0755)).To(Succeed())
+					Expect(ioutil.WriteFile(filepath.Join(path, "bin", "java"), []byte("java.exe"), 0755)).To(Succeed())
+					return nil
+				})
+			})
+
+			It("installs and links the JDK", func() {
+				Expect(supplier.InstallJVM()).To(Succeed())
+				Expect(filepath.Join(depsDir, depsIdx, "jvm", "bin", "java")).To(BeAnExistingFile())
+				Expect(filepath.Join(depsDir, depsIdx, "bin", "java")).To(BeAnExistingFile())
+			})
+
+			It("writes jruby default env vars to profile.d", func() {
+				Expect(supplier.InstallJVM()).To(Succeed())
+				body, err := ioutil.ReadFile(filepath.Join(depsDir, depsIdx, "profile.d", "jruby.sh"))
+				Expect(err).ToNot(HaveOccurred())
+				Expect(string(body)).To(ContainSubstring(`export JAVA_MEM=${JAVA_MEM:--Xmx${JVM_MAX_HEAP:-384}m}`))
+			})
+		})
+	})
+
 	Describe("CreateDefaultEnv", func() {
 		AfterEach(func() {
 			os.Unsetenv("RAILS_ENV")
@@ -150,7 +187,7 @@ var _ = Describe("Supply", func() {
 						mockCache.EXPECT().Metadata().Return(&cache.Metadata{SecretKeyBase: "foobar"})
 					})
 					It("writes the cached SECRET_KEY_BASE to profile.d", func() {
-						Expect(supplier.WriteProfileD()).To(Succeed())
+						Expect(supplier.WriteProfileD("enginename")).To(Succeed())
 						contents, err := ioutil.ReadFile(filepath.Join(depsDir, depsIdx, "profile.d", "ruby.sh"))
 						Expect(err).ToNot(HaveOccurred())
 						Expect(string(contents)).To(ContainSubstring("export SECRET_KEY_BASE=${SECRET_KEY_BASE:-foobar}"))
@@ -163,7 +200,7 @@ var _ = Describe("Supply", func() {
 						mockCommand.EXPECT().Output(buildDir, "bundle", "exec", "rake", "secret").Return("abcdef", nil)
 					})
 					It("writes default SECRET_KEY_BASE to profile.d", func() {
-						Expect(supplier.WriteProfileD()).To(Succeed())
+						Expect(supplier.WriteProfileD("enginename")).To(Succeed())
 						contents, err := ioutil.ReadFile(filepath.Join(depsDir, depsIdx, "profile.d", "ruby.sh"))
 						Expect(err).ToNot(HaveOccurred())
 						Expect(string(contents)).To(ContainSubstring("export SECRET_KEY_BASE=${SECRET_KEY_BASE:-abcdef}"))
@@ -176,7 +213,7 @@ var _ = Describe("Supply", func() {
 					mockVersions.EXPECT().HasGemVersion("rails", ">=4.1.0.beta1").Return(false, nil)
 				})
 				It("does not set default SECRET_KEY_BASE in profile.d", func() {
-					Expect(supplier.WriteProfileD()).To(Succeed())
+					Expect(supplier.WriteProfileD("enginename")).To(Succeed())
 					contents, err := ioutil.ReadFile(filepath.Join(depsDir, depsIdx, "profile.d", "ruby.sh"))
 					Expect(err).ToNot(HaveOccurred())
 					Expect(string(contents)).ToNot(ContainSubstring("SECRET_KEY_BASE"))
@@ -191,31 +228,31 @@ var _ = Describe("Supply", func() {
 			})
 
 			It("writes default RAILS_ENV to profile.d", func() {
-				Expect(supplier.WriteProfileD()).To(Succeed())
+				Expect(supplier.WriteProfileD("somerubyengine")).To(Succeed())
 				contents, err := ioutil.ReadFile(filepath.Join(depsDir, depsIdx, "profile.d", "ruby.sh"))
 				Expect(err).ToNot(HaveOccurred())
 				Expect(string(contents)).To(ContainSubstring("export RAILS_ENV=${RAILS_ENV:-production}"))
 			})
 
 			It("writes default RAILS_SERVE_STATIC_FILES to profile.d", func() {
-				Expect(supplier.WriteProfileD()).To(Succeed())
+				Expect(supplier.WriteProfileD("somerubyengine")).To(Succeed())
 				contents, err := ioutil.ReadFile(filepath.Join(depsDir, depsIdx, "profile.d", "ruby.sh"))
 				Expect(err).ToNot(HaveOccurred())
 				Expect(string(contents)).To(ContainSubstring("export RAILS_SERVE_STATIC_FILES=${RAILS_SERVE_STATIC_FILES:-enabled}"))
 			})
 
 			It("writes default RAILS_LOG_TO_STDOUT to profile.d", func() {
-				Expect(supplier.WriteProfileD()).To(Succeed())
+				Expect(supplier.WriteProfileD("somerubyengine")).To(Succeed())
 				contents, err := ioutil.ReadFile(filepath.Join(depsDir, depsIdx, "profile.d", "ruby.sh"))
 				Expect(err).ToNot(HaveOccurred())
 				Expect(string(contents)).To(ContainSubstring("export RAILS_LOG_TO_STDOUT=${RAILS_LOG_TO_STDOUT:-enabled}"))
 			})
 
 			It("writes default GEM_PATH to profile.d", func() {
-				Expect(supplier.WriteProfileD()).To(Succeed())
+				Expect(supplier.WriteProfileD("somerubyengine")).To(Succeed())
 				contents, err := ioutil.ReadFile(filepath.Join(depsDir, depsIdx, "profile.d", "ruby.sh"))
 				Expect(err).ToNot(HaveOccurred())
-				Expect(string(contents)).To(ContainSubstring("export GEM_PATH=${GEM_PATH:-GEM_PATH=$DEPS_DIR/9/vendor_bundle/ruby/2.3.19:$DEPS_DIR/9/gem_home:$DEPS_DIR/9/bundler}"))
+				Expect(string(contents)).To(ContainSubstring("export GEM_PATH=${GEM_PATH:-GEM_PATH=$DEPS_DIR/9/vendor_bundle/somerubyengine/2.3.19:$DEPS_DIR/9/gem_home:$DEPS_DIR/9/bundler}"))
 			})
 		})
 	})

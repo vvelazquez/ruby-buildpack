@@ -30,7 +30,43 @@ var _ = Describe("Ruby", func() {
 	AfterEach(func() {
 		mockCtrl.Finish()
 	})
-	Describe("Version", func() {
+
+	Describe("Engine", func() {
+		Context("Gemfile has a mri", func() {
+			BeforeEach(func() {
+				Expect(ioutil.WriteFile(filepath.Join(tmpDir, "Gemfile"), []byte(`ruby "~>2.2.0"`), 0644)).To(Succeed())
+			})
+
+			It("returns ruby", func() {
+				v := versions.New(tmpDir, manifest)
+				Expect(v.Engine()).To(Equal("ruby"))
+			})
+		})
+
+		Context("Gemfile has jruby", func() {
+			BeforeEach(func() {
+				Expect(ioutil.WriteFile(filepath.Join(tmpDir, "Gemfile"), []byte(`ruby '2.2.3', :engine => 'jruby', :engine_version => '9.1.12.0'`), 0644)).To(Succeed())
+			})
+
+			It("returns jruby", func() {
+				v := versions.New(tmpDir, manifest)
+				Expect(v.Engine()).To(Equal("jruby"))
+			})
+		})
+
+		Context("Gemfile has no constraint", func() {
+			BeforeEach(func() {
+				Expect(ioutil.WriteFile(filepath.Join(tmpDir, "Gemfile"), []byte(``), 0644)).To(Succeed())
+			})
+
+			It("returns ruby", func() {
+				v := versions.New(tmpDir, manifest)
+				Expect(v.Engine()).To(Equal("ruby"))
+			})
+		})
+	})
+
+	FDescribe("Version", func() {
 		Context("Gemfile has a constraint", func() {
 			BeforeEach(func() {
 				Expect(ioutil.WriteFile(filepath.Join(tmpDir, "Gemfile"), []byte(`ruby "~>2.2.0"`), 0644)).To(Succeed())
@@ -66,8 +102,20 @@ var _ = Describe("Ruby", func() {
 		})
 
 		PIt("BUNDLE_GEMFILE env var is set", func() {})
-		PIt("Gemfile specifies jruby", func() {})
-		PIt("Gemfile specifies rubinius", func() {})
+	})
+
+	Describe("JrubyVersion", func() {
+		Context("Gemfile has a constraint", func() {
+			BeforeEach(func() {
+				Expect(ioutil.WriteFile(filepath.Join(tmpDir, "Gemfile"), []byte(`ruby '2.3.3', :engine => 'jruby', :engine_version => '9.1.12.0'`), 0644)).To(Succeed())
+			})
+			It("returns the requested version", func() {
+				v := versions.New(tmpDir, manifest)
+				Expect(v.JrubyVersion()).To(Equal("ruby-2.3.3-jruby-9.1.12.0"))
+			})
+		})
+
+		PIt("BUNDLE_GEMFILE env var is set", func() {})
 	})
 
 	Describe("RubyEngineVersion", func() {

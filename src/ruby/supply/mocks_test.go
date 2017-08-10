@@ -151,6 +151,19 @@ func (_m *MockVersions) EXPECT() *MockVersionsMockRecorder {
 	return _m.recorder
 }
 
+// Engine mocks base method
+func (_m *MockVersions) Engine() (string, error) {
+	ret := _m.ctrl.Call(_m, "Engine")
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Engine indicates an expected call of Engine
+func (_mr *MockVersionsMockRecorder) Engine() *gomock.Call {
+	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "Engine", reflect.TypeOf((*MockVersions)(nil).Engine))
+}
+
 // Version mocks base method
 func (_m *MockVersions) Version() (string, error) {
 	ret := _m.ctrl.Call(_m, "Version")
@@ -162,6 +175,19 @@ func (_m *MockVersions) Version() (string, error) {
 // Version indicates an expected call of Version
 func (_mr *MockVersionsMockRecorder) Version() *gomock.Call {
 	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "Version", reflect.TypeOf((*MockVersions)(nil).Version))
+}
+
+// JrubyVersion mocks base method
+func (_m *MockVersions) JrubyVersion() (string, error) {
+	ret := _m.ctrl.Call(_m, "JrubyVersion")
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// JrubyVersion indicates an expected call of JrubyVersion
+func (_mr *MockVersionsMockRecorder) JrubyVersion() *gomock.Call {
+	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "JrubyVersion", reflect.TypeOf((*MockVersions)(nil).JrubyVersion))
 }
 
 // RubyEngineVersion mocks base method
